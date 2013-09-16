@@ -285,7 +285,7 @@ module Invoicing
   #                            included though). If you're chaining scopes it would be advantageous
   #                            to put this one close to the beginning of your scope chain.
   module LedgerItem
-    
+
     module ActMethods
       # Declares that the current class is a model for ledger items (i.e. invoices, credit notes and
       # payment notes).
@@ -302,46 +302,50 @@ module Invoicing
       #   acts_as_ledger_item :total_amount => :gross_amount
       def acts_as_ledger_item(*args)
         Invoicing::ClassInfo.acts_as(Invoicing::LedgerItem, self, args)
-        
+
         info = ledger_item_class_info
         return unless info.previous_info.nil? # Called for the first time?
-        
+
         before_validation :calculate_total_amount
-        
+
         # Set the 'amount' columns to act as currency values
         acts_as_currency_value(info.method(:total_amount), info.method(:tax_amount),
           :currency => info.method(:currency), :value_for_formatting => :value_for_formatting)
-        
+
         extend Invoicing::FindSubclasses
         include Invoicing::LedgerItem::RenderHTML
         include Invoicing::LedgerItem::RenderUBL
-        
+
         # Dynamically created named scopes
-        named_scope :sent_by, lambda{ |sender_id|
+        scope :sent_by, lambda{ |sender_id|
           { :conditions => {info.method(:sender_id) => sender_id} }
         }
-        
-        named_scope :received_by, lambda{ |recipient_id|
+
+        scope :received_by, lambda{ |recipient_id|
           { :conditions => {info.method(:recipient_id) => recipient_id} }
         }
-        
-        named_scope :sent_or_received_by, lambda{ |sender_or_recipient_id|
+
+        scope :sent_or_received_by, lambda{ |sender_or_recipient_id|
           sender_col = connection.quote_column_name(info.method(:sender_id))
           recipient_col = connection.quote_column_name(info.method(:recipient_id))
           { :conditions => ["#{sender_col} = ? OR #{recipient_col} = ?",
                             sender_or_recipient_id, sender_or_recipient_id] }
         }
-        
-        named_scope :in_effect, :conditions => {info.method(:status) => ['closed', 'cleared']}
-        
-        named_scope :open_or_pending, :conditions => {info.method(:status) => ['open', 'pending']}
-        
-        named_scope :due_at, lambda{ |date|
-          due_date = connection.quote_column_name(info.method(:due_date))
-          {:conditions => ["#{due_date} <= ? OR #{due_date} IS NULL", date]}
+
+        scope :in_effect, lambda {
+          { :conditions => {info.method(:status) => ['closed', 'cleared']} }
         }
-        
-        named_scope :sorted, lambda{|column|
+
+        scope :open_or_pending, lambda {
+          { :conditions => {info.method(:status) => ['open', 'pending']} }
+        }
+
+        scope :due_at, lambda{ |date|
+          due_date = connection.quote_column_name(info.method(:due_date))
+          where(["#{due_date} <= ? OR #{due_date} IS NULL", date])
+        }
+
+        scope :sorted, lambda{|column|
           column = ledger_item_class_info.method(column).to_s
           if column_names.include?(column)
             {:order => "#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}"}
@@ -349,51 +353,45 @@ module Invoicing
             {:order => connection.quote_column_name(primary_key)}
           end
         }
-        
-        named_scope :exclude_empty_invoices, lambda{
+
+        scope :exclude_empty_invoices, lambda{
           line_items_assoc_id = info.method(:line_items).to_sym
           line_items_refl = reflections[line_items_assoc_id]
           line_items_table = line_items_refl.quoted_table_name
-          
+
           # e.g. `ledger_items`.`id`
           ledger_items_id = quoted_table_name + "." + connection.quote_column_name(primary_key)
-          
+
           # e.g. `line_items`.`id`
           line_items_id = line_items_table + "." +
             connection.quote_column_name(line_items_refl.klass.primary_key)
-          
+
           # e.g. `line_items`.`ledger_item_id`
           ledger_item_foreign_key = line_items_table + "." + connection.quote_column_name(
             line_items_refl.klass.send(:line_item_class_info).method(:ledger_item_id))
-          
+
           payment_classes = select_matching_subclasses(:is_payment, true).map{|c| c.name}
           is_payment_class = merge_conditions({info.method(:type) => payment_classes})
-          
-          subquery = construct_finder_sql(
-            :select => "#{quoted_table_name}.*, COUNT(#{line_items_id}) AS number_of_line_items",
-            :joins => "LEFT JOIN #{line_items_table} ON #{ledger_item_foreign_key} = #{ledger_items_id}",
-            :group => Invoicing::ConnectionAdapterExt.group_by_all_columns(self)
-          )
-            
-          {:from => "(#{subquery}) AS #{quoted_table_name}",
-           :conditions => "number_of_line_items > 0 OR #{is_payment_class}"}
+
+          joins("LEFT JOIN #{line_items_table} ON #{ledger_item_foreign_key} = #{ledger_items_id}").
+          where("(#{ledger_item_foreign_key} IS NULL) OR #{is_payment_class}")
         }
       end # def acts_as_ledger_item
-      
+
       # Synonym for <tt>acts_as_ledger_item :subtype => :invoice</tt>. All options other than
       # <tt>:subtype</tt> are passed on to +acts_as_ledger_item+. You should apply
       # +acts_as_invoice+ only to a model which is a subclass of an +acts_as_ledger_item+ type.
       def acts_as_invoice(options={})
         acts_as_ledger_item(options.clone.update({:subtype => :invoice}))
       end
-      
+
       # Synonym for <tt>acts_as_ledger_item :subtype => :credit_note</tt>. All options other than
       # <tt>:subtype</tt> are passed on to +acts_as_ledger_item+. You should apply
       # +acts_as_credit_note+ only to a model which is a subclass of an +acts_as_ledger_item+ type.
       def acts_as_credit_note(options={})
         acts_as_ledger_item(options.clone.update({:subtype => :credit_note}))
       end
-      
+
       # Synonym for <tt>acts_as_ledger_item :subtype => :payment</tt>. All options other than
       # <tt>:subtype</tt> are passed on to +acts_as_ledger_item+. You should apply
       # +acts_as_payment+ only to a model which is a subclass of an +acts_as_ledger_item+ type.
@@ -401,7 +399,7 @@ module Invoicing
         acts_as_ledger_item(options.clone.update({:subtype => :payment}))
       end
     end # module ActMethods
-    
+
     # Overrides the default constructor of <tt>ActiveRecord::Base</tt> when +acts_as_ledger_item+
     # is called. If the +uuid+ gem is installed, this constructor creates a new UUID and assigns
     # it to the +uuid+ property when a new ledger item model object is created.
@@ -413,7 +411,7 @@ module Invoicing
         write_attribute(info.method(:uuid), info.uuid_generator.generate)
       end
     end
-    
+
     # Calculate sum of net_amount and tax_amount across all line items, and assign it to total_amount;
     # calculate sum of tax_amount across all line items, and assign it to tax_amount.
     # Called automatically as a +before_validation+ callback. If the LedgerItem subtype is +payment+
@@ -423,26 +421,26 @@ module Invoicing
       return if self.class.is_payment && line_items.empty?
 
       net_total = tax_total = BigDecimal('0')
-      
+
       line_items.each do |line|
         info = line.send(:line_item_class_info)
-        
+
         # Make sure ledger_item association is assigned -- the CurrencyValue
         # getters depend on it to fetch the currency
         info.set(line, :ledger_item, self)
         line.valid? # Ensure any before_validation hooks are called
-        
+
         net_amount = info.get(line, :net_amount)
         tax_amount = info.get(line, :tax_amount)
         net_total += net_amount unless net_amount.nil?
         tax_total += tax_amount unless tax_amount.nil?
       end
-      
+
       ledger_item_class_info.set(self, :total_amount, net_total + tax_total)
       ledger_item_class_info.set(self, :tax_amount,   tax_total)
       return net_total
     end
-    
+
     # We don't actually implement anything using +method_missing+ at the moment, but use it to
     # generate slightly more useful error messages in certain cases.
     def method_missing(method_id, *args)
@@ -462,13 +460,13 @@ module Invoicing
       tax_amount   = ledger_item_class_info.get(self, :tax_amount)
       (total_amount && tax_amount) ? (total_amount - tax_amount) : nil
     end
-    
+
     # +net_amount+ formatted in human-readable form using the ledger item's currency.
     def net_amount_formatted
       format_currency_value(net_amount)
     end
-    
-    
+
+
     # You must overwrite this method in subclasses of +Invoice+, +CreditNote+ and +Payment+ so that it returns
     # details of the party sending the document. See +sender_id+ above for a detailed interpretation of
     # sender and receiver.
@@ -502,28 +500,28 @@ module Invoicing
     def sender_details
       raise 'overwrite this method'
     end
-    
+
     # You must overwrite this method in subclasses of +Invoice+, +CreditNote+ and +Payment+ so that it returns
     # details of the party receiving the document. See +recipient_id+ above for a detailed interpretation of
     # sender and receiver. See +sender_details+ for a list of fields to return in the hash.
     def recipient_details
       raise 'overwrite this method'
     end
-    
+
     # Returns +true+ if this document was sent by the user with ID +user_id+. If the argument is +nil+
     # (indicating yourself), this also returns +true+ if <tt>sender_details[:is_self]</tt>.
     def sent_by?(user_id)
       (ledger_item_class_info.get(self, :sender_id) == user_id) ||
         !!(user_id.nil? && ledger_item_class_info.get(self, :sender_details)[:is_self])
     end
-    
+
     # Returns +true+ if this document was received by the user with ID +user_id+. If the argument is +nil+
     # (indicating yourself), this also returns +true+ if <tt>recipient_details[:is_self]</tt>.
     def received_by?(user_id)
       (ledger_item_class_info.get(self, :recipient_id) == user_id) ||
         !!(user_id.nil? && ledger_item_class_info.get(self, :recipient_details)[:is_self])
     end
-    
+
     # Returns a boolean which specifies whether this transaction should be recorded as a debit (+true+)
     # or a credit (+false+) on a particular ledger. Unless you know what you are doing, you probably
     # do not need to touch this method.
@@ -561,8 +559,8 @@ module Invoicing
       value = -value if (options[:credit] == :negative) && !debit?(options[:self_id])
       value
     end
-    
-    
+
+
     module ClassMethods
       # Returns +true+ if this type of ledger item should be recorded as a debit when the party
       # viewing the account is the sender of the document, and recorded as a credit when
@@ -579,22 +577,22 @@ module Invoicing
           else nil
         end
       end
-      
+
       # Returns +true+ if this type of ledger item is a +invoice+ subtype, and +false+ otherwise.
       def is_invoice
         ledger_item_class_info.subtype == :invoice
       end
-      
+
       # Returns +true+ if this type of ledger item is a +credit_note+ subtype, and +false+ otherwise.
       def is_credit_note
         ledger_item_class_info.subtype == :credit_note
       end
-      
+
       # Returns +true+ if this type of ledger item is a +payment+ subtype, and +false+ otherwise.
       def is_payment
         ledger_item_class_info.subtype == :payment
       end
-      
+
       # Returns a summary of the customer or supplier account between two parties identified
       # by +self_id+ (the party from whose perspective the account is seen, 'you') and +other_id+
       # ('them', your supplier/customer). The return value is a hash with ISO 4217 currency codes
@@ -628,7 +626,7 @@ module Invoicing
         info = ledger_item_class_info
         self_id = self_id.to_i
         other_id = [nil, ''].include?(other_id) ? nil : other_id.to_i
-        
+
         if other_id.nil?
           result = {}
           # Sum over all others, grouped by currency
@@ -642,16 +640,13 @@ module Invoicing
             end
           end
           result
-          
         else
           conditions = {info.method(:sender_id)    => [self_id, other_id],
                         info.method(:recipient_id) => [self_id, other_id]}
-          with_scope(:find => {:conditions => conditions}) do
-            account_summaries(self_id, options)[other_id] || {}
-          end
+          where(conditions).account_summaries(self_id, options)[other_id] || {}
         end
       end
-    
+
       # Returns a summary account status for all customers or suppliers with which a particular party
       # has dealings. Takes into account all +closed+ invoices/credit notes and all +cleared+ payments
       # which have +self_id+ as their +sender_id+ or +recipient_id+. Returns a hash whose keys are the
@@ -679,8 +674,7 @@ module Invoicing
       def account_summaries(self_id, options={})
         info = ledger_item_class_info
         ext = Invoicing::ConnectionAdapterExt
-        scope = scope(:find)
-        
+
         debit_classes  = select_matching_subclasses(:debit_when_sent_by_self, true,  self.table_name, self.inheritance_column).map{|c| c.name}
         credit_classes = select_matching_subclasses(:debit_when_sent_by_self, false, self.table_name, self.inheritance_column).map{|c| c.name}
         debit_when_sent      = merge_conditions({info.method(:sender_id)    => self_id, info.method(:type) => debit_classes})
@@ -692,31 +686,24 @@ module Invoicing
         [:total_amount, :sender_id, :recipient_id, :status, :currency].each do |col|
           cols[col] = connection.quote_column_name(info.method(col))
         end
-        
+
         sender_is_self    = merge_conditions({info.method(:sender_id)    => self_id})
         recipient_is_self = merge_conditions({info.method(:recipient_id) => self_id})
         other_id_column = ext.conditional_function(sender_is_self, cols[:recipient_id], cols[:sender_id])
-        accept_status = sanitize_sql_hash_for_conditions(info.method(:status) => (options[:with_status] || %w(closed cleared)))
+        accept_status = merge_conditions(info.method(:status) => (options[:with_status] || %w(closed cleared)))
         filter_conditions = "#{accept_status} AND (#{sender_is_self} OR #{recipient_is_self})"
 
-        sql = "SELECT #{other_id_column} AS other_id, #{cols[:currency]} AS currency, " + 
+        sql = select("#{other_id_column} AS other_id, #{cols[:currency]} AS currency, " +
           "SUM(#{ext.conditional_function(debit_when_sent,      cols[:total_amount], 0)}) AS sales, " +
           "SUM(#{ext.conditional_function(debit_when_received,  cols[:total_amount], 0)}) AS purchase_payments, " +
           "SUM(#{ext.conditional_function(credit_when_sent,     cols[:total_amount], 0)}) AS sale_receipts, " +
-          "SUM(#{ext.conditional_function(credit_when_received, cols[:total_amount], 0)}) AS purchases " +
-          "FROM #{(scope && scope[:from]) || quoted_table_name} "
-        
-        # Structure borrowed from ActiveRecord::Base.construct_finder_sql
-        add_joins!(sql, nil, scope)
-        add_conditions!(sql, filter_conditions, scope)
-        
-        sql << " GROUP BY other_id, currency"
+          "SUM(#{ext.conditional_function(credit_when_received, cols[:total_amount], 0)}) AS purchases ")
 
-        add_order!(sql, nil, scope)
-        add_limit!(sql, {}, scope)
-        add_lock!(sql, {}, scope)
-        
-        rows = connection.select_all(sql)
+        sql = sql.where(filter_conditions)
+        sql = sql.group("other_id, currency")
+
+        # add order, limit, and lock from outside
+        rows = connection.execute(sql.to_sql).to_a
 
         results = {}
         rows.each do |row|
@@ -724,16 +711,16 @@ module Invoicing
           other_id = row[:other_id].to_i
           currency = row[:currency].to_sym
           summary = {:balance => BigDecimal('0'), :currency => currency}
-          
+
           {:sales => 1, :purchases => -1, :sale_receipts => -1, :purchase_payments => 1}.each_pair do |field, factor|
-            summary[field] = BigDecimal(row[field])
+            summary[field] = BigDecimal(row[field].to_s)
             summary[:balance] += BigDecimal(factor.to_s) * summary[field]
           end
-          
+
           results[other_id] ||= {}
           results[other_id][currency] = AccountSummary.new summary
         end
-        
+
         results
       end
 
@@ -751,7 +738,7 @@ module Invoicing
         sender_recipient_to_ledger_item_ids = {}
         result_map = {}
         info = ledger_item_class_info
-        
+
         # Find the most recent occurrence of each ID, first in the sender_id column, then in recipient_id
         [:sender_id, :recipient_id].each do |column|
           column = info.method(column)
@@ -759,19 +746,19 @@ module Invoicing
           sql = "SELECT MAX(#{primary_key}) AS id, #{quoted_column} AS ref FROM #{quoted_table_name} WHERE "
           sql << merge_conditions({column => sender_recipient_ids})
           sql << " GROUP BY #{quoted_column}"
-          
+
           ActiveRecord::Base.connection.select_all(sql).each do |row|
             sender_recipient_to_ledger_item_ids[row['ref'].to_i] = row['id'].to_i
           end
-          
+
           sender_recipient_ids -= sender_recipient_to_ledger_item_ids.keys
         end
-        
+
         # Load all the ledger items needed to get one representative of each name
         find(sender_recipient_to_ledger_item_ids.values.uniq).each do |ledger_item|
           sender_id = info.get(ledger_item, :sender_id)
           recipient_id = info.get(ledger_item, :recipient_id)
-          
+
           if sender_recipient_to_ledger_item_ids.include? sender_id
             details = info.get(ledger_item, :sender_details)
             result_map[sender_id] = details[:name]
@@ -781,25 +768,37 @@ module Invoicing
             result_map[recipient_id] = details[:name]
           end
         end
-        
+
         result_map
       end
-      
+
+      def merge_conditions(*conditions)
+        segments = []
+
+        conditions.each do |condition|
+          unless condition.blank?
+            sql = sanitize_sql(condition)
+            segments << sql unless sql.blank?
+          end
+        end
+
+        "(#{segments.join(') AND (')})" unless segments.empty?
+      end
     end # module ClassMethods
-    
-    
+
+
     # Very simple class for representing the sum of all sales, purchases and payments on
     # an account.
     class AccountSummary #:nodoc:
       NUM_FIELDS = [:sales, :purchases, :sale_receipts, :purchase_payments, :balance]
       attr_reader *([:currency] + NUM_FIELDS)
-            
+
       def initialize(hash)
         @currency = hash[:currency]; @sales = hash[:sales]; @purchases = hash[:purchases]
         @sale_receipts = hash[:sale_receipts]; @purchase_payments = hash[:purchase_payments]
         @balance = hash[:balance]
       end
-      
+
       def method_missing(name, *args)
         if name.to_s =~ /(.*)_formatted$/
           ::Invoicing::CurrencyValue::Formatter.format_value(currency, send($1))
@@ -807,13 +806,13 @@ module Invoicing
           super
         end
       end
-      
+
       def +(other)
         hash = {:currency => currency}
         NUM_FIELDS.each {|field| hash[field] = send(field) + other.send(field) }
         AccountSummary.new hash
       end
-      
+
       def to_s
         NUM_FIELDS.map do |field|
           val = send("#{field}_formatted")
@@ -821,24 +820,24 @@ module Invoicing
         end.join('; ')
       end
     end
-    
-    
+
+
     # Stores state in the ActiveRecord class object
     class ClassInfo < Invoicing::ClassInfo::Base #:nodoc:
       attr_reader :subtype, :uuid_generator
-      
+
       def initialize(model_class, previous_info, args)
         super
         @subtype = all_options[:subtype]
-        
+
         begin # try to load the UUID gem
           require 'uuid'
           @uuid_generator = UUID.new
-        rescue LoadError, NameError # silently ignore if gem not found          
+        rescue LoadError, NameError # silently ignore if gem not found
           @uuid_generator = nil
         end
       end
-      
+
       # Allow methods generated by +CurrencyValue+ to be renamed as well
       def method(name)
         if name.to_s =~ /^(.*)_formatted$/

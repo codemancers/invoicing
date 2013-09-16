@@ -4,19 +4,19 @@ module Invoicing
       def acts_as_tax_rate(*args)
         Invoicing::ClassInfo.acts_as(Invoicing::TaxRate, self, args)
         info = tax_rate_class_info
-        
+
         if info.previous_info.nil? # Called for the first time?
           # Import TimeDependent functionality
           acts_as_time_dependent :value => :rate
         end
       end
     end
-    
+
     # Stores state in the ActiveRecord class object
     class ClassInfo < Invoicing::ClassInfo::Base #:nodoc:
       def initialize(model_class, previous_info, args)
         super
       end
-    end    
+    end
   end
 end

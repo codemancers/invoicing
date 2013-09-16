@@ -25,14 +25,14 @@ module Invoicing
         yield output_builder if block_given?
         output_builder.build
       end
-      
-      
+
+
       class HTMLOutputBuilder #:nodoc:
-      
+
         HTML_ESCAPE = { '&' => '&amp;', '>' => '&gt;', '<' => '&lt;', '"' => '&quot;' }
-        
+
         attr_reader :ledger_item, :current_line_item, :options, :custom_fragments, :factor
-        
+
         def initialize(ledger_item, options)
           @ledger_item = ledger_item
           @options = default_options
@@ -41,7 +41,7 @@ module Invoicing
           total_amount = get(:total_amount)
           @factor = (total_amount && total_amount < BigDecimal('0')) ? BigDecimal('-1') : BigDecimal('1')
         end
-        
+
         def default_options
           line_items = get(:line_items)
           {
@@ -58,7 +58,7 @@ module Invoicing
         def h(s)
           s.to_s.gsub(/[#{HTML_ESCAPE.keys.join}]/) { |char| HTML_ESCAPE[char] }
         end
-        
+
         # foo { block }   => call block when invoking fragment foo
         # foo "string"    => return string when invoking fragment foo
         # invoke_foo      => invoke fragment foo; if none set, delegate to default_foo
@@ -72,7 +72,7 @@ module Invoicing
               return send("default_#{method_id}", *args, &block)
             end
           end
-          
+
           return super unless respond_to? "default_#{method_id}"
 
           if block_given? && args.empty?
@@ -83,22 +83,22 @@ module Invoicing
             raise ArgumentError, "#{method_id} expects exactly one value or block argument"
           end
         end
-        
+
         # Returns the value of a (potentially renamed) method on the ledger item
         def get(method_id)
           ledger_item.send(:ledger_item_class_info).get(ledger_item, method_id)
         end
-        
+
         # Returns the value of a (potentially renamed) method on a line item
         def line_get(method_id, line_item = current_line_item)
           line_item.send(:line_item_class_info).get(line_item, method_id)
         end
-        
+
         # String for one level of indentation
         def indent
           '    '
         end
-        
+
         # This is quite meta. :)
         #
         #   params_hash(:sender_label, :sender_tax_number => :tax_number_label)
@@ -108,13 +108,13 @@ module Invoicing
           result = {}
           param_names.flatten!
           options = param_names.extract_options!
-          
+
           param_names.each{|param| result[param.to_sym] = send("invoke_#{param}") }
-          
+
           options.each_pair do |key, value|
             result[key.to_sym] = send("invoke_#{key}", params_hash(value))
           end
-          
+
           result
         end
 
@@ -124,7 +124,7 @@ module Invoicing
             :sender_tax_number    => :tax_number_label,
             :recipient_tax_number => :tax_number_label
           }]
-          
+
           metadata_table_deps = [{
             :identifier   =>  :identifier_label,
             :issue_date   => [:date_format, :issue_date_label],
@@ -132,24 +132,24 @@ module Invoicing
             :period_end   => [:date_format, :period_end_label],
             :due_date     => [:date_format, :due_date_label]
           }]
-          
+
           line_items_header_deps = [:line_tax_point_label, :line_quantity_label, :line_description_label,
             :line_net_amount_label, :line_tax_amount_label, :line_gross_amount_label]
-            
+
           line_items_subtotal_deps = [:subtotal_label, :net_amount_label, :tax_amount_label,
             :gross_amount_label, {
             :net_amount => :net_amount_label,
             :tax_amount => :tax_amount_label,
             :total_amount => :gross_amount_label
           }]
-          
+
           line_items_total_deps = [:total_label, :net_amount_label, :tax_amount_label,
             :gross_amount_label, {
             :net_amount => :net_amount_label,
             :tax_amount => :tax_amount_label,
             :total_amount => :gross_amount_label
           }]
-          
+
           page_layout_deps = {
             :title_tag => :title,
             :addresses_table => addresses_table_deps,
@@ -161,107 +161,107 @@ module Invoicing
               :line_items_total    => line_items_total_deps
             }]
           }
-          
+
           invoke_page_layout(params_hash(page_layout_deps))
         end
-        
+
         def default_date_format
           "%Y-%m-%d"
         end
-        
+
         def default_invoice_label
           "Invoice"
         end
-        
+
         def default_credit_note_label
           "Credit Note"
         end
-        
+
         def default_recipient_label
           "Recipient"
         end
-        
+
         def default_sender_label
           "Sender"
         end
-        
+
         def default_tax_number_label
           "VAT number:<br />"
         end
-        
+
         def default_identifier_label
           label = (factor == BigDecimal('-1')) ? invoke_credit_note_label : invoke_invoice_label
           "#{label} no.:"
         end
-        
+
         def default_issue_date_label
           "Issue date:"
         end
-        
+
         def default_period_start_label
           "Period from:"
         end
-        
+
         def default_period_end_label
           "Period until:"
         end
-        
+
         def default_due_date_label
           "Payment due:"
         end
-        
+
         def default_line_tax_point_label
           "Tax point"
         end
-        
+
         def default_line_quantity_label
           "Quantity"
         end
-        
+
         def default_line_description_label
           "Description"
         end
-        
+
         def default_line_net_amount_label
           "Net price"
         end
-        
+
         def default_line_tax_amount_label
           "VAT"
         end
-        
+
         def default_line_gross_amount_label
           "Gross price"
         end
-        
+
         def default_subtotal_label
           "Subtotal"
         end
-        
+
         def default_total_label
           "Total"
         end
-        
+
         def default_net_amount_label
           "Net: "
         end
-        
+
         def default_tax_amount_label
           "VAT: "
         end
-        
+
         def default_gross_amount_label
           ""
         end
-        
+
         def default_title
           (factor == BigDecimal('-1')) ? invoke_credit_note_label : invoke_invoice_label
         end
-        
+
         def default_title_tag(params)
           "<h1 class=\"invoice\">#{params[:title]}</h1>\n"
         end
-        
+
         def default_address(details)
           details = details.symbolize_keys
           html =  "#{indent*3}<div class=\"fn org\">#{       h(details[:name])        }</div>\n"
@@ -274,25 +274,25 @@ module Invoicing
           html << "#{indent*4}<span class=\"country-name\">#{h(details[:country])     }</span>\n"       unless details[:country].blank?
           html << "#{indent*3}</div>\n"
         end
-        
+
         def default_sender_address
           invoke_address(get(:sender_details))
         end
-        
+
         def default_recipient_address
           invoke_address(get(:recipient_details))
         end
-        
+
         def default_sender_tax_number(params)
           sender_tax_number = get(:sender_details).symbolize_keys[:tax_number]
           "#{params[:tax_number_label]}<span class=\"tax-number\">#{h(sender_tax_number)}</span>"
         end
-        
+
         def default_recipient_tax_number(params)
           recipient_tax_number = get(:recipient_details).symbolize_keys[:tax_number]
           "#{params[:tax_number_label]}<span class=\"tax-number\">#{h(recipient_tax_number)}</span>"
         end
-        
+
         def default_addresses_table(params)
           html =  "#{indent*0}<table class=\"invoice addresses\">\n"
           html << "#{indent*1}<tr>\n"
@@ -315,7 +315,7 @@ module Invoicing
           html << "#{indent*1}</tr>\n"
           html << "#{indent*0}</table>\n"
         end
-        
+
         def default_metadata_item(params, key, value)
           label = params["#{key}_label".to_sym]
           html =  "#{indent*1}<tr class=\"#{key.to_s.gsub(/_/, '-')}\">\n"
@@ -323,11 +323,11 @@ module Invoicing
           html << "#{indent*2}<td>#{h(value)}</td>\n"
           html << "#{indent*1}</tr>\n"
         end
-        
+
         def default_identifier(params)
           invoke_metadata_item(params, :identifier, get(:identifier))
         end
-        
+
         def default_issue_date(params)
           if issue_date = get(:issue_date)
             invoke_metadata_item(params, :issue_date, issue_date.strftime(params[:date_format]))
@@ -335,7 +335,7 @@ module Invoicing
             ""
           end
         end
-        
+
         def default_period_start(params)
           if period_start = get(:period_start)
             invoke_metadata_item(params, :period_start, period_start.strftime(params[:date_format]))
@@ -343,7 +343,7 @@ module Invoicing
             ""
           end
         end
-        
+
         def default_period_end(params)
           if period_end = get(:period_end)
             invoke_metadata_item(params, :period_end, period_end.strftime(params[:date_format]))
@@ -351,7 +351,7 @@ module Invoicing
             ""
           end
         end
-        
+
         def default_due_date(params)
           if due_date = get(:due_date)
             invoke_metadata_item(params, :due_date, due_date.strftime(params[:date_format]))
@@ -364,15 +364,15 @@ module Invoicing
           "<table class=\"invoice metadata\">\n" + params[:identifier] + params[:issue_date] +
             params[:period_start] + params[:period_end] + params[:due_date] + "#{indent*0}</table>\n"
         end
-        
+
         def default_description
           h(get(:description))
         end
-        
+
         def default_description_tag(params)
           "<p class=\"invoice description\">#{params[:description]}</p>\n"
         end
-        
+
         def default_line_items_header(params)
           html =  "#{indent*1}<tr>\n"
           html << "#{indent*2}<th class=\"tax-point\">#{   params[:line_tax_point_label]   }</th>\n" if options[:tax_point_column]
@@ -383,7 +383,7 @@ module Invoicing
           html << "#{indent*2}<th class=\"gross-amount\">#{params[:line_gross_amount_label]}</th>\n" if options[:gross_amount_column]
           html << "#{indent*1}</tr>\n"
         end
-        
+
         def default_line_tax_point(params)
           if tax_point = line_get(:tax_point)
             h(tax_point.strftime(params[:date_format]))
@@ -391,15 +391,15 @@ module Invoicing
             ""
           end
         end
-        
+
         def default_line_quantity(params)
           h(line_get(:quantity).to_s)
         end
-        
+
         def default_line_description(params)
           h(line_get(:description))
         end
-        
+
         def default_line_net_amount(params)
           if net_amount = line_get(:net_amount)
             h(current_line_item.format_currency_value(net_amount*factor))
@@ -407,7 +407,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_line_tax_amount(params)
           if tax_amount = line_get(:tax_amount)
             h(current_line_item.format_currency_value(tax_amount*factor))
@@ -415,7 +415,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_line_gross_amount(params)
           if gross_amount = line_get(:gross_amount)
             h(current_line_item.format_currency_value(gross_amount*factor))
@@ -423,7 +423,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_net_amount(params)
           if net_amount = get(:net_amount)
             h(ledger_item.format_currency_value(net_amount*factor))
@@ -431,7 +431,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_tax_amount(params)
           if tax_amount = get(:tax_amount)
             h(ledger_item.format_currency_value(tax_amount*factor))
@@ -439,7 +439,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_total_amount(params)
           if total_amount = get(:total_amount)
             h(ledger_item.format_currency_value(total_amount*factor))
@@ -447,7 +447,7 @@ module Invoicing
             "—"
           end
         end
-        
+
         def default_line_item(params)
           html =  "#{indent*1}<tr>\n"
           html << "#{indent*2}<td class=\"tax-point\">#{   params[:line_tax_point]   }</td>\n" if options[:tax_point_column]
@@ -472,7 +472,7 @@ module Invoicing
             ))
           end.join
         end
-        
+
         def default_line_items_subtotal(params)
           colspan = 0
           colspan += 1 if options[:tax_point_column]
@@ -485,7 +485,7 @@ module Invoicing
           html << "#{indent*2}<td class=\"gross-amount\"></td>\n" if options[:gross_amount_column]
           html << "#{indent*1}</tr>\n"
         end
-        
+
         def default_line_items_total(params)
           colspan = -1
           colspan += 1 if options[:tax_point_column]
@@ -506,7 +506,7 @@ module Invoicing
           html << params[:line_items_subtotal] if options[:subtotal]
           html << params[:line_items_total] + "</table>\n"
         end
-        
+
         def default_page_layout(params)
           params[:title_tag] + params[:addresses_table] + params[:metadata_table] +
           params[:description_tag] + params[:line_items_table]

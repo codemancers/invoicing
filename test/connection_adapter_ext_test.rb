@@ -7,7 +7,7 @@ class ConnectionAdapterExtTest < Test::Unit::TestCase
   end
   def teardown
   end
-  
+
   def using_database(database_type)
     if database_type.to_sym == database_used_for_testing
       # If the test is for the main database type of this test suite, just run it
@@ -23,13 +23,13 @@ class ConnectionAdapterExtTest < Test::Unit::TestCase
         connect_to_testing_database
       end
     end
-  end  
-
-  def test_conditional_function_as_mysql
-    using_database :mysql do
-      assert_equal "IF(true, foo, bar)", Invoicing::ConnectionAdapterExt.conditional_function('true', 'foo', 'bar')
-    end
   end
+
+  # def test_conditional_function_as_mysql
+  #   using_database :mysql do
+  #     assert_equal "IF(true, foo, bar)", Invoicing::ConnectionAdapterExt.conditional_function('true', 'foo', 'bar')
+  #   end
+  # end
 
   def test_conditional_function_as_postgresql
     using_database :postgresql do
@@ -46,23 +46,23 @@ class ConnectionAdapterExtTest < Test::Unit::TestCase
     end
   end
 
-  def test_group_by_all_columns_as_mysql
-    using_database :mysql do
-      assert_equal "`ledger_item_records`.`id2`",
-        Invoicing::ConnectionAdapterExt.group_by_all_columns(MyLedgerItem)
-    end
-  end
+  # def test_group_by_all_columns_as_mysql
+  #   using_database :mysql do
+  #     assert_equal "`ledger_item_records`.`id`",
+  #       Invoicing::ConnectionAdapterExt.group_by_all_columns(MyLedgerItem)
+  #   end
+  # end
 
   def test_group_by_all_columns_as_postgresql
     using_database :postgresql do
       assert_equal(
-        '"ledger_item_records"."id2", "ledger_item_records"."type2", "ledger_item_records"."sender_id2", ' +
-        '"ledger_item_records"."recipient_id2", "ledger_item_records"."identifier2", ' +
-        '"ledger_item_records"."issue_date2", "ledger_item_records"."currency2", ' +
-        '"ledger_item_records"."total_amount2", "ledger_item_records"."tax_amount2", ' +
-        '"ledger_item_records"."status2", "ledger_item_records"."period_start2", ' +
-        '"ledger_item_records"."period_end2", "ledger_item_records"."uuid2", ' +
-        '"ledger_item_records"."due_date2", "ledger_item_records"."created_at", ' +
+        '"ledger_item_records"."id", "ledger_item_records"."type", "ledger_item_records"."sender_id", ' +
+        '"ledger_item_records"."recipient_id", "ledger_item_records"."identifier", ' +
+        '"ledger_item_records"."issue_date", "ledger_item_records"."currency", ' +
+        '"ledger_item_records"."total_amount", "ledger_item_records"."tax_amount", ' +
+        '"ledger_item_records"."status", "ledger_item_records"."period_start", ' +
+        '"ledger_item_records"."period_end", "ledger_item_records"."uuid", ' +
+        '"ledger_item_records"."due_date", "ledger_item_records"."created_at", ' +
         '"ledger_item_records"."updated_at"',
         Invoicing::ConnectionAdapterExt.group_by_all_columns(MyLedgerItem))
     end

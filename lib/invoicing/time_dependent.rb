@@ -63,11 +63,11 @@ module Invoicing
   #   +----+-------+---------------+------------+---------------------+---------------------+----------------+
   #   | id | value | description   | is_default | valid_from          | valid_until         | replaced_by_id |
   #   +----+-------+---------------+------------+---------------------+---------------------+----------------+
-  #   |  1 | 0.175 | Standard rate |          1 | 1991-04-01 00:00:00 | 2008-12-01 00:00:00 |              4 | 
+  #   |  1 | 0.175 | Standard rate |          1 | 1991-04-01 00:00:00 | 2008-12-01 00:00:00 |              4 |
   #   |  2 |  0.05 | Reduced rate  |          0 | 1991-04-01 00:00:00 | NULL                |           NULL |
   #   |  3 |   0.0 | Zero rate     |          0 | 1991-04-01 00:00:00 | NULL                |           NULL |
-  #   |  4 |  0.15 | Standard rate |          1 | 2008-12-01 00:00:00 | 2010-01-01 00:00:00 |              5 | 
-  #   |  5 | 0.175 | Standard rate |          1 | 2010-01-01 00:00:00 | NULL                |           NULL | 
+  #   |  4 |  0.15 | Standard rate |          1 | 2008-12-01 00:00:00 | 2010-01-01 00:00:00 |              5 |
+  #   |  5 | 0.175 | Standard rate |          1 | 2010-01-01 00:00:00 | NULL                |           NULL |
   #   +----+-------+---------------+------------+---------------------+---------------------+----------------+
   #
   # Graphically, this may be illustrated as:
@@ -174,11 +174,11 @@ module Invoicing
       #     belongs_to :referral_program
       #     named_scope :for_referral_program, lambda { |p| { :conditions => { :referral_program_id => p.id } } }
       #   end
-      #   
+      #
       #   reseller_program = ReferralProgram.find(1)
       #   current_commission = CommissionRate.for_referral_program(reseller_program).default_record_now
       #   puts "Earn #{current_commission.rate} per cent commission as a reseller..."
-      #   
+      #
       #   changes = current_commission.changes_until(1.year.from_now)
       #   for next_commission in changes
       #     message = next_commission.nil? ? "Discontinued as of" : "Changing to #{next_commission.rate} per cent on"
@@ -189,15 +189,15 @@ module Invoicing
       def acts_as_time_dependent(*args)
         # Activate CachedRecord first, because ClassInfo#initialize expects the cache to be ready
         acts_as_cached_record(*args)
-        
+
         Invoicing::ClassInfo.acts_as(Invoicing::TimeDependent, self, args)
-                
+
         # Create replaced_by association if it doesn't exist yet
         replaced_by_id = time_dependent_class_info.method(:replaced_by_id)
         unless respond_to? :replaced_by
-          belongs_to :replaced_by, :class_name => class_name, :foreign_key => replaced_by_id
+          belongs_to :replaced_by, :class_name => self, :foreign_key => replaced_by_id
         end
-        
+
         # Create value_at and value_now method aliases
         value_method = time_dependent_class_info.method(:value).to_s
         if value_method != 'value'
@@ -213,7 +213,7 @@ module Invoicing
       end # acts_as_time_dependent
     end # module ActMethods
 
-    
+
     module ClassMethods
       # Returns a list of records which are valid at some point during a particular date/time
       # range. If there is a change of rate during this time interval, and one rate replaces
@@ -230,7 +230,7 @@ module Invoicing
       # valid but will become valid within the next month, for example.
       def valid_records_during(not_before, not_after)
         info = time_dependent_class_info
-        
+
         # List of all records whose validity period intersects the selected period
         valid_records = cached_record_list.select do |record|
           valid_from  = info.get(record, :valid_from)
@@ -239,13 +239,13 @@ module Invoicing
           not_yet_expired  = (valid_until == nil) || (valid_until > not_before)
           has_taken_effect && not_yet_expired
         end
-        
+
         # Select only those which do not have a predecessor which is also valid
         valid_records.select do |record|
           record.predecessors.empty? || (valid_records & record.predecessors).empty?
         end
       end
-      
+
       # Returns the list of all records which are valid at one particular point in time.
       # If you need to consider a period of time rather than a point in time, use
       # +valid_records_during+.
@@ -259,7 +259,7 @@ module Invoicing
           has_taken_effect && not_yet_expired
         end
       end
-      
+
       # Returns the default record which is valid at a particular point in time.
       # If there is no record marked as default, nil is returned; if there are
       # multiple records marked as default, results are undefined.
@@ -268,12 +268,12 @@ module Invoicing
         info = time_dependent_class_info
         valid_records_at(point_in_time).select{|record| info.get(record, :is_default)}.first
       end
-      
+
       # Returns the default record which is valid at the current moment.
       def default_record_now
         default_record_at(Time.now)
       end
-      
+
       # Finds the default record for a particular +point_in_time+ (using +default_record_at+),
       # then returns the value of that record's +value+ column. If +value+ was renamed to
       # +another_method_name+ (option to +acts_as_time_dependent+), then
@@ -281,7 +281,7 @@ module Invoicing
       def default_value_at(point_in_time)
         time_dependent_class_info.get(default_record_at(point_in_time), :value)
       end
-    
+
       # Finds the current default record (like +default_record_now+),
       # then returns the value of that record's +value+ column. If +value+ was renamed to
       # +another_method_name+ (option to +acts_as_time_dependent+), then
@@ -289,7 +289,7 @@ module Invoicing
       def default_value_now
         default_value_at(Time.now)
       end
-    
+
     end # module ClassMethods
 
     # Returns a list of objects of the same type as this object, which refer to this object
@@ -298,7 +298,7 @@ module Invoicing
     def predecessors
       time_dependent_class_info.predecessors(self)
     end
-    
+
     # Translates this record into its replacement for a given point in time, if necessary/possible.
     #
     # * If this record is still valid at the given date/time, this method just returns self.
@@ -311,7 +311,7 @@ module Invoicing
     def record_at(point_in_time)
       valid_from  = time_dependent_class_info.get(self, :valid_from)
       valid_until = time_dependent_class_info.get(self, :valid_until)
-      
+
       if valid_from > point_in_time
         (predecessors.size == 1) ? predecessors[0].record_at(point_in_time) : nil
       elsif valid_until.nil? || (valid_until > point_in_time)
@@ -322,13 +322,13 @@ module Invoicing
         replaced_by.record_at(point_in_time)
       end
     end
-  
+
     # Returns self if this record is currently valid, otherwise its past or future replacement
     # (see +record_at+). If there is no valid replacement, nil is returned.
     def record_now
       record_at Time.now
     end
-    
+
     # Finds this record's replacement for a given point in time (see +record_at+), then returns
     # the value in its +value+ column. If +value+ was renamed to +another_method_name+ (option to
     # +acts_as_time_dependent+), then +another_method_name_at+ is defined as an alias for +value_at+.
@@ -342,7 +342,7 @@ module Invoicing
     def value_now
       value_at Time.now
     end
-    
+
     # Examines the replacement chain from this record into the future, during the period
     # starting with this record's +valid_from+ and ending at +point_in_time+.
     # If this record stays valid until after +point_in_time+, an empty list is returned.
@@ -361,11 +361,11 @@ module Invoicing
       end
       changes
     end
-    
-    
+
+
     # Stores state in the ActiveRecord class object
     class ClassInfo < Invoicing::ClassInfo::Base #:nodoc:
-      
+
       def initialize(model_class, previous_info, args)
         super
         # @predecessors is a hash of an ID pointing to the list of all objects which have that ID
@@ -379,7 +379,7 @@ module Invoicing
           end
         end
       end
-      
+
       def predecessors(record)
         @predecessors[get(record, :id)] || []
       end

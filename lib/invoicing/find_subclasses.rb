@@ -12,14 +12,14 @@ module Invoicing
   #     extend Invoicing::FindSubclasses
   #     def self.needs_refrigeration; false; end
   #   end
-  #   
+  #
   #   class Food < Product; end
   #   class Bread < Food; end
   #   class Yoghurt < Food
   #     def self.needs_refrigeration; true; end
   #   end
   #   class GreekYoghurt < Yoghurt; end
-  #   
+  #
   #   class Drink < Product; end
   #   class SoftDrink < Drink; end
   #   class Smoothie < Drink
@@ -72,11 +72,11 @@ module Invoicing
   # <tt>Class#inherited</tt> method; we use this to gather together a list of subclasses. Of course,
   # we won't necessarily know about every class in the world which may subclass our class; in
   # particular, <tt>Class#inherited</tt> won't be called until that subclass is loaded.
-  # 
+  #
   # If you're including the Ruby files with the subclass definitions using +require+, we will learn
-  # about subclasses as soon as they are defined. However, if class loading is delayed until a 
+  # about subclasses as soon as they are defined. However, if class loading is delayed until a
   # class is first used (for example, <tt>ActiveSupport::Dependencies</tt> does this with model
-  # objects in Rails projects), we could run into a situation where we don't yet know about all 
+  # objects in Rails projects), we could run into a situation where we don't yet know about all
   # subclasses used in a project at the point where we need to process a class method condition.
   # This would cause us to omit some objects we should have found.
   #
@@ -89,7 +89,7 @@ module Invoicing
   # to be on the safe side you can ensure all subclasses are loaded when your application
   # initialises -- but that's not completely DRY ;-)
   module FindSubclasses
-    
+
     # Overrides <tt>ActiveRecord::Base.sanitize_sql_hash_for_conditions</tt> since this is the method
     # used to transform a hash of conditions into an SQL query fragment. This overriding method
     # searches for class method conditions in the hash and transforms them into a condition on the
@@ -103,14 +103,14 @@ module Invoicing
     #   {:my_class_method => false}       # known_subclasses.reject{|cls| cls.my_class_method }
     def sanitize_sql_hash_for_conditions(attrs, table_name = quoted_table_name)
       new_attrs = {}
-      
+
       attrs.each_pair do |attr, value|
         attr = attr_base = attr.to_s
         attr_table_name = table_name
 
         # Extract table name from qualified attribute names
         attr_table_name, attr_base = attr.split('.', 2) if attr.include?('.')
-        
+
         if columns_hash.include?(attr_base) || ![self.table_name, quoted_table_name].include?(attr_table_name)
           new_attrs[attr] = value   # Condition on a table column, or another table -- pass through unmodified
         else
@@ -125,10 +125,35 @@ module Invoicing
 
       super(new_attrs, table_name)
     end
-    
+
+    def expand_hash_conditions_for_aggregates(attrs)
+      new_attrs = {}
+
+      attrs.each_pair do |attr, value|
+        attr = attr_base = attr.to_s
+        attr_table_name = table_name
+
+        # Extract table name from qualified attribute names
+        attr_table_name, attr_base = attr.split('.', 2) if attr.include?('.')
+
+        if columns_hash.include?(attr_base) || ![self.table_name, quoted_table_name].include?(attr_table_name)
+          new_attrs[attr] = value   # Condition on a table column, or another table -- pass through unmodified
+        else
+          begin
+            matching_classes = select_matching_subclasses(attr_base, value)
+            new_attrs["#{self.table_name}.#{inheritance_column}"] = matching_classes.map{|cls| cls.name.to_s}
+          rescue NoMethodError
+            new_attrs[attr] = value # If the class method doesn't exist, fall back to passing condition through unmodified
+          end
+        end
+      end
+
+      super(new_attrs)
+    end
+
     # Returns a list of those classes within +known_subclasses+ which match a condition
     # <tt>method_name => value</tt>. May raise +NoMethodError+ if a class object does not
-    # respond to +method_name+. 
+    # respond to +method_name+.
     def select_matching_subclasses(method_name, value, table = table_name, type_column = inheritance_column)
       known_subclasses(table, type_column).select do |cls|
         returned = cls.send(method_name)
@@ -139,28 +164,28 @@ module Invoicing
         end
       end
     end
-    
+
     # Ruby callback which is invoked when a subclass is created. We use this to build a list of known
     # subclasses.
     def inherited(subclass)
       remember_subclass subclass
       super
     end
-    
+
     # Add +subclass+ to the list of know subclasses of this class.
     def remember_subclass(subclass)
       @known_subclasses ||= [self]
       @known_subclasses << subclass unless @known_subclasses.include? subclass
       self.superclass.remember_subclass(subclass) if self.superclass.respond_to? :remember_subclass
     end
-    
+
     # Return the list of all known subclasses of this class, if necessary checking the database for
     # classes which have not yet been loaded.
     def known_subclasses(table = table_name, type_column = inheritance_column)
       load_all_subclasses_found_in_database(table, type_column)
       @known_subclasses ||= [self]
     end
-    
+
   private
     # Query the database for all qualified class names found in the +type_column+ column
     # (called +type+ by default), and check that classes of that name have been loaded by the Ruby

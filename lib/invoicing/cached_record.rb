@@ -63,7 +63,7 @@ module Invoicing
       def cached_record_list
         cached_record_class_info.list
       end
-      
+
       # Reloads the cached objects from the database.
       def reload_cache
         cached_record_class_info.reload_cache
@@ -78,12 +78,12 @@ module Invoicing
         super
         reload_cache
       end
-      
+
       def reload_cache
         @cache = {}
-        model_class.find(:all).each {|obj| @cache[get(obj, :id)] = obj }
+        model_class.all.each {|obj| @cache[get(obj, :id)] = obj }
       end
-  
+
       # Returns one object from the cache, given its ID.
       def find_one(id, options)
         if result = @cache[id]
@@ -92,12 +92,12 @@ module Invoicing
           raise ::ActiveRecord::RecordNotFound, "Couldn't find #{model_class.name} with ID=#{id}"
         end
       end
-      
+
       # Returns a list of objects from the cache, given a list of IDs.
       def find_some(ids, options)
         ids.map{|id| find_one(id, options) }
       end
-      
+
       # Returns a list of all objects in the cache.
       def list
         @cache.values

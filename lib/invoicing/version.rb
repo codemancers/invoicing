@@ -4,7 +4,7 @@ module Invoicing
     MINOR   = 2
     BUILD   = 1
 
-    def to_a 
+    def to_a
       [MAJOR, MINOR, BUILD]
     end
 
