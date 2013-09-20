@@ -187,9 +187,6 @@ module Invoicing
       #   end
       #
       def acts_as_time_dependent(*args)
-        # Activate CachedRecord first, because ClassInfo#initialize expects the cache to be ready
-        acts_as_cached_record(*args)
-
         Invoicing::ClassInfo.acts_as(Invoicing::TimeDependent, self, args)
 
         # Create replaced_by association if it doesn't exist yet
@@ -232,7 +229,7 @@ module Invoicing
         info = time_dependent_class_info
 
         # List of all records whose validity period intersects the selected period
-        valid_records = cached_record_list.select do |record|
+        valid_records = all.select do |record|
           valid_from  = info.get(record, :valid_from)
           valid_until = info.get(record, :valid_until)
           has_taken_effect = (valid_from < not_after) # N.B. less than
@@ -251,7 +248,7 @@ module Invoicing
       # +valid_records_during+.
       def valid_records_at(point_in_time)
         info = time_dependent_class_info
-        cached_record_list.select do |record|
+        all.select do |record|
           valid_from  = info.get(record, :valid_from)
           valid_until = info.get(record, :valid_until)
           has_taken_effect = (valid_from <= point_in_time) # N.B. less than or equals
@@ -365,23 +362,23 @@ module Invoicing
 
     # Stores state in the ActiveRecord class object
     class ClassInfo < Invoicing::ClassInfo::Base #:nodoc:
-
-      def initialize(model_class, previous_info, args)
-        super
+      def predecessors(record)
         # @predecessors is a hash of an ID pointing to the list of all objects which have that ID
         # as replaced_by_id value
-        @predecessors = {}
-        for record in model_class.cached_record_list
-          id = get(record, :replaced_by_id)
-          unless id.nil?
-            @predecessors[id] ||= []
-            @predecessors[id] << record
-          end
-        end
+        @predecessors ||= fetch_predecessors
+        @predecessors[get(record, :id)] || []
       end
 
-      def predecessors(record)
-        @predecessors[get(record, :id)] || []
+      def fetch_predecessors
+        _predecessors = {}
+        for record in model_class.all
+          id = get(record, :replaced_by_id)
+          unless id.nil?
+            _predecessors[id] ||= []
+            _predecessors[id] << record
+          end
+        end
+        _predecessors
       end
     end # class ClassInfo
   end # module TimeDependent
