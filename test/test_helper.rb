@@ -2,6 +2,7 @@ require 'test/unit'
 require 'rubygems'
 require 'active_record'
 require 'active_support'
+require 'active_support/dependencies'
 require 'flexmock/test_unit'
 require 'pry-rails'
 

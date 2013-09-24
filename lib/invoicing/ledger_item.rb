@@ -677,10 +677,12 @@ module Invoicing
 
         debit_classes  = select_matching_subclasses(:debit_when_sent_by_self, true,  self.table_name, self.inheritance_column).map{|c| c.name}
         credit_classes = select_matching_subclasses(:debit_when_sent_by_self, false, self.table_name, self.inheritance_column).map{|c| c.name}
-        debit_when_sent      = merge_conditions({info.method(:sender_id)    => self_id, info.method(:type) => debit_classes})
-        debit_when_received  = merge_conditions({info.method(:recipient_id) => self_id, info.method(:type) => credit_classes})
-        credit_when_sent     = merge_conditions({info.method(:sender_id)    => self_id, info.method(:type) => credit_classes})
-        credit_when_received = merge_conditions({info.method(:recipient_id) => self_id, info.method(:type) => debit_classes})
+
+        # rails 3 idiocricies. in case of STI, type of base class is nil. Need special handling
+        debit_when_sent      = merge_conditions(inheritance_condition(debit_classes),  info.method(:sender_id)    => self_id)
+        debit_when_received  = merge_conditions(inheritance_condition(credit_classes), info.method(:recipient_id) => self_id)
+        credit_when_sent     = merge_conditions(inheritance_condition(credit_classes), info.method(:sender_id)    => self_id)
+        credit_when_received = merge_conditions(inheritance_condition(debit_classes),  info.method(:recipient_id) => self_id)
 
         cols = {}
         [:total_amount, :sender_id, :recipient_id, :status, :currency].each do |col|
@@ -770,6 +772,17 @@ module Invoicing
         end
 
         result_map
+      end
+
+      def inheritance_condition(classes)
+        segments = []
+        segments << sanitize_sql(inheritance_column => classes)
+
+        if classes.include?(self.to_s) && self.new.send(inheritance_column).nil?
+          segments << sanitize_sql(type: nil)
+        end
+
+        "(#{segments.join(') OR (')})" unless segments.empty?
       end
 
       def merge_conditions(*conditions)

@@ -13,10 +13,10 @@ class ClassInfoTestSubclass2   < ClassInfoTestRecord; end
 class ClassInfoTestSubSubclass < ClassInfoTestSubclass2; end
 
 
-ClassInfoTestRecord.create!(value: 2, type: "ClassInfoTestRecord")
-ClassInfoTestRecord.create!(value: 3, type: "ClassInfoTestSubclass")
-ClassInfoTestRecord.create!(value: 3, type: "ClassInfoTestSubclass2")
-ClassInfoTestRecord.create!(value: 3, type: "ClassInfoTestSubSubclass")
+ClassInfoTestRecord.create!(value: 2)
+ClassInfoTestSubclass.create!(value: 3)
+ClassInfoTestSubclass2.create!(value: 3)
+ClassInfoTestSubSubclass.create!(value: 3)
 
 
 connection.create_table :class_info_test2_records do |t|

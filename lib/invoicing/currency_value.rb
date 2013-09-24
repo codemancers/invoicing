@@ -195,7 +195,7 @@ module Invoicing
               (options[:negative] == :hyphen) ? "-#{formatted}" : "\xE2\x88\x92#{formatted}"
             )
           end
-          formatted
+          formatted.force_encoding("utf-8")
         end
       end
     end

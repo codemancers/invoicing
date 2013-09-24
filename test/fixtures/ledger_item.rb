@@ -1,7 +1,7 @@
 connection = ActiveRecord::Base.connection
 
 connection.create_table :ledger_item_records do |t|
-  t.string   :type, null: false
+  t.string   :type
   t.integer  :sender_id
   t.integer  :recipient_id
   t.string   :identifier
@@ -50,7 +50,6 @@ ledger_item_entries = [
 
 ledger_item_entries.each do |entry|
   params = {}
-  params[:type]         = entry[1]
   params[:sender_id]    = entry[2]
   params[:recipient_id] = entry[3]
   params[:identifier]   = entry[4]
@@ -66,7 +65,8 @@ ledger_item_entries.each do |entry|
   params[:created_at]   = entry[14]
   params[:updated_at]   = entry[15]
 
-  MyLedgerItem.create!(params)
+  type = entry[1]
+  type.constantize.create!(params)
 end
 
 Object.send(:remove_const, :LedgerItemRecord        )

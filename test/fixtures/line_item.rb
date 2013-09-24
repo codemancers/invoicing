@@ -38,7 +38,6 @@ line_item_entries = [
 
 line_item_entries.each do |entry|
   params = {}
-  params[:type]           = entry[1]
   params[:ledger_item_id] = entry[2]
   params[:net_amount]     = entry[3]
   params[:tax_amount]     = entry[4]
@@ -51,7 +50,8 @@ line_item_entries.each do |entry|
   params[:created_at]     = entry[11]
   params[:updated_at]     = entry[12]
 
-  SuperLineItem.create!(params)
+  type = entry[1]
+  type.constantize.create!(params)
 end
 
 Object.send(:remove_const, :SuperLineItem  )
