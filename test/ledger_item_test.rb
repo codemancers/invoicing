@@ -1,9 +1,7 @@
 # encoding: utf-8
-
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-####### Helper stuff
-
+## Helper stuff
 module LedgerItemMethods
   def user_id_to_details_hash(user_id)
     case user_id
@@ -41,8 +39,7 @@ module LedgerItemMethods
 end
 
 
-####### Classes for use in the tests
-
+## Classes for use in the tests
 class MyLedgerItem < ActiveRecord::Base
   self.table_name = "ledger_item_records"
   acts_as_ledger_item
@@ -85,10 +82,8 @@ class OverwrittenMethodsNotPresentLedgerItem < ActiveRecord::Base
   acts_as_invoice
 end
 
-####### The actual tests
-
-class LedgerItemTest < Test::Unit::TestCase
-
+## The actual tests
+class LedgerItemTest < MiniTest::Unit::TestCase
   def test_total_amount_is_currency_value
     record = MyLedgerItem.find(5)
     assert_equal '$432.10', record.total_amount_formatted
@@ -143,8 +138,8 @@ class LedgerItemTest < Test::Unit::TestCase
   def test_invoice_to_self_is_credit
     record = InvoiceSubtype.find(2)
     assert_kind_of MyInvoice, record
-    assert !record.debit?(1)
-    assert !record.debit?(nil)
+    refute record.debit?(1)
+    refute record.debit?(nil)
   end
 
   def test_invoice_to_customer_is_seen_as_credit_by_customer
@@ -163,14 +158,14 @@ class LedgerItemTest < Test::Unit::TestCase
   end
 
   def test_credit_note_to_customer_is_seen_as_credit_by_customer
-    assert !MyCreditNote.find(3).debit?(2)
+    refute MyCreditNote.find(3).debit?(2)
   end
 
   def test_payment_receipt_from_self_is_credit
     record = MyPayment.find(4)
     assert_kind_of MyPayment, record
-    assert !record.debit?(1)
-    assert !record.debit?(nil)
+    refute record.debit?(1)
+    refute record.debit?(nil)
   end
 
   def test_payment_receipt_to_customer_is_seen_as_debit_by_customer
@@ -178,7 +173,7 @@ class LedgerItemTest < Test::Unit::TestCase
   end
 
   def test_cannot_determine_debit_status_for_uninvolved_party
-    assert_raise ArgumentError do
+    assert_raises ArgumentError do
       MyInvoice.find(1).debit?(3)
     end
   end
@@ -210,19 +205,19 @@ class LedgerItemTest < Test::Unit::TestCase
   end
 
   def test_must_overwrite_sender_details
-    assert_raise RuntimeError do
+    assert_raises RuntimeError do
       OverwrittenMethodsNotPresentLedgerItem.new.sender_details
     end
   end
 
   def test_must_overwrite_recipient_details
-    assert_raise RuntimeError do
+    assert_raises RuntimeError do
       OverwrittenMethodsNotPresentLedgerItem.new.recipient_details
     end
   end
 
   def test_must_provide_line_items_association
-    assert_raise RuntimeError do
+    assert_raises RuntimeError do
       OverwrittenMethodsNotPresentLedgerItem.new.line_items
     end
   end
@@ -232,6 +227,7 @@ class LedgerItemTest < Test::Unit::TestCase
     invoice.line_items << SuperLineItem.new(:net_amount => 100, :tax_amount => 15)
     invoice.line_items << SubLineItem.new(:net_amount => 10)
     invoice.valid?
+
     assert_equal BigDecimal('125'), invoice.total_amount
     assert_equal BigDecimal('15'), invoice.tax_amount
   end
@@ -240,41 +236,41 @@ class LedgerItemTest < Test::Unit::TestCase
     invoice = MyInvoice.find(9)
     invoice.line_items << SuperLineItem.new(:net_amount => 10, :tax_amount => 1.5)
     invoice.save!
-    assert_equal([{'total_amount' => 23, 'tax_amount' => 3}],
-      ActiveRecord::Base.connection.select_all("SELECT total_amount, tax_amount FROM ledger_item_records WHERE id=9").to_ary)
+
+    invoice.reload
+    assert_equal BigDecimal('23'), invoice.total_amount
+    assert_equal BigDecimal('3'),  invoice.tax_amount
   end
 
   def test_calculate_total_amount_for_updated_line_item
-    SuperLineItem.where("id > 8").destroy_all
-
     # This might occur while an invoice is still open
     invoice = MyInvoice.find(9)
     invoice.line_items[0].net_amount = '20'
     invoice.line_items[0].tax_amount = 3
     invoice.save!
-    assert_equal([{'total_amount' => 23, 'tax_amount' => 3}],
-      ActiveRecord::Base.connection.select_all("SELECT total_amount, tax_amount FROM ledger_item_records WHERE id=9").to_ary)
+
+    invoice.reload
     assert_equal BigDecimal('23'), invoice.total_amount
-    assert_equal BigDecimal('3'), invoice.tax_amount
+    assert_equal BigDecimal('3'),  invoice.tax_amount
   end
 
   def test_do_not_overwrite_total_amount_for_payment_without_line_items
     payment = MyPayment.new(:total_amount => 23.45)
     payment.save!
-    assert_equal([{'total_amount' => 23.45}],
-      ActiveRecord::Base.connection.select_all("SELECT total_amount FROM ledger_item_records WHERE id=#{payment.id}").to_ary)
+
+    assert_equal 23.45, payment.reload.total_amount
   end
 
   def test_find_invoice_subclasses
-    assert_equal %w(InvoiceSubtype MyInvoice), MyLedgerItem.select_matching_subclasses(:is_invoice, true).map{|c| c.name}.sort
+    assert_equal %w(InvoiceSubtype MyInvoice), MyLedgerItem.select_matching_subclasses(:is_invoice, true).map(&:name).sort
   end
 
   def test_find_credit_note_subclasses
-    assert_equal %w(MyCreditNote), MyLedgerItem.select_matching_subclasses(:is_credit_note, true).map{|c| c.name}
+    assert_equal %w(MyCreditNote), MyLedgerItem.select_matching_subclasses(:is_credit_note, true).map(&:name)
   end
 
   def test_find_payment_subclasses
-    assert_equal %w(MyPayment), MyLedgerItem.select_matching_subclasses(:is_payment, true).map{|c| c.name}
+    assert_equal %w(MyPayment), MyLedgerItem.select_matching_subclasses(:is_payment, true).map(&:name)
   end
 
   def test_account_summary
@@ -368,64 +364,70 @@ class LedgerItemTest < Test::Unit::TestCase
   end
 
   def test_account_summary_object_call_unknown_method
-    assert_raise NoMethodError do
+    assert_raises NoMethodError do
       MyLedgerItem.account_summary(1, 2)[:GBP].this_method_does_not_exist
     end
   end
 
   def test_sender_recipient_name_map_all
-    assert_equal({1 => 'Unlimited Limited', 2 => 'Lovely Customer Inc.', 3 => 'I drink milk',
-      4 => 'The taxman'}, MyLedgerItem.sender_recipient_name_map([1,2,3,4]))
+    expected_info = {
+      1 => 'Unlimited Limited',
+      2 => 'Lovely Customer Inc.',
+      3 => 'I drink milk',
+      4 => 'The taxman'
+    }
+
+    assert_equal expected_info, MyLedgerItem.sender_recipient_name_map([1, 2, 3, 4])
   end
 
   def test_sender_recipient_name_map_subset
-    assert_equal({1 => 'Unlimited Limited', 3 => 'I drink milk'}, MyLedgerItem.sender_recipient_name_map([1,3]))
+    expected_info = {1 => 'Unlimited Limited', 3 => 'I drink milk'}
+    assert_equal expected_info, MyLedgerItem.sender_recipient_name_map([1, 3])
   end
 
   def test_sent_by_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [2,5], MyLedgerItem.sent_by(2).map{|i| i.id}.sort
+    assert_equal [2, 5], MyLedgerItem.sent_by(2).pluck(:id).sort
   end
 
   def test_received_by_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [1,3,4,7,8,9,10,11], MyLedgerItem.received_by(2).map{|i| i.id}.sort
+    actual_ids = MyLedgerItem.received_by(2).pluck(:id).sort
+    assert_equal [1, 3, 4, 7, 8, 9, 10, 11], actual_ids
   end
 
   def test_sent_or_received_by_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [1,2,3,4,5,7,8,9,10,11], MyLedgerItem.sent_or_received_by(2).map{|i| i.id}.sort
+    acutal_ids = MyLedgerItem.sent_or_received_by(2).pluck(:id).sort
+    assert_equal [1, 2, 3, 4, 5, 7, 8, 9, 10, 11], acutal_ids
   end
 
   def test_in_effect_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [1,2,3,4,5,6,7,8,9,10,11], MyLedgerItem.all.map{|i| i.id}.sort
-    assert_equal [1,2,3,4,5,6,11], MyLedgerItem.in_effect.map{|i| i.id}.sort
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], MyLedgerItem.pluck(:id).sort
+    assert_equal [1, 2, 3, 4, 5, 6, 11], MyLedgerItem.in_effect.pluck(:id).sort
   end
 
   def test_open_or_pending_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [8,9], MyLedgerItem.open_or_pending.map{|i| i.id}.sort
+    assert_equal [8, 9], MyLedgerItem.open_or_pending.pluck(:id).sort
   end
 
   def test_due_at_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [1,3,4,7,8,10,11], MyLedgerItem.due_at(Time.zone.parse('2009-01-30')).pluck(:id)
-    assert_equal [1,2,3,4,7,8,10,11], MyLedgerItem.due_at(Time.zone.parse('2009-01-31')).pluck(:id)
+    jan_30_ids = MyLedgerItem.due_at(Time.zone.parse('2009-01-30')).pluck(:id)
+    assert_equal [1, 3, 4, 7, 8, 10, 11], jan_30_ids
+
+    jan_31_ids = MyLedgerItem.due_at(Time.zone.parse('2009-01-31')).pluck(:id)
+    assert_equal [1, 2, 3, 4, 7, 8, 10, 11], jan_31_ids
   end
 
   def test_sorted_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [5,1,4,3,8,2,6,7,9,10,11], MyLedgerItem.sorted(:issue_date).pluck(:id)
+    sorted_ids = MyLedgerItem.sorted(:issue_date).pluck(:id)
+    assert_equal [5, 1, 4, 3, 8, 2, 6, 7, 9, 10, 11], sorted_ids
   end
 
   def test_sorted_scope_with_non_existent_column
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [1,2,3,4,5,6,7,8,9,10,11], MyLedgerItem.sorted(:this_column_does_not_exist).pluck(:id)
+    sorted_ids = MyLedgerItem.sorted(:this_column_does_not_exist).pluck(:id)
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], sorted_ids
   end
 
   def test_exclude_empty_invoices_scope
-    MyLedgerItem.where("id > 11").destroy_all
-    assert_equal [4,7,8,11], MyLedgerItem.exclude_empty_invoices.pluck(:id)
+    empty_invoice_ids = MyLedgerItem.exclude_empty_invoices.pluck(:id)
+    assert_equal [4, 7, 8, 11], empty_invoice_ids
   end
 end

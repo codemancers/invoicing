@@ -11,3 +11,8 @@ gemspec
 # your gem to rubygems.org.
 
 gem "pry-rails"
+
+# Issue in database cleaner for sqlite support
+# https://github.com/bmabey/database_cleaner/issues/224
+# https://github.com/bmabey/database_cleaner/pull/241
+gem "database_cleaner", github: "tommeier/database_cleaner", branch: "fix-superclass-1-1-1"

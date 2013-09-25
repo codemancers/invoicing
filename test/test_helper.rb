@@ -1,16 +1,28 @@
-require 'test/unit'
-require 'rubygems'
-require 'active_record'
-require 'active_support'
-require 'active_support/dependencies'
-require 'flexmock/test_unit'
-require 'pry-rails'
+require "minitest/unit"
+require "active_record"
+require "active_support"
+require "active_support/dependencies"
+require "database_cleaner"
+require "flexmock/test_unit"
+require "pry-rails"
 
 $: << File.join(File.dirname(__FILE__), '..', 'lib')
 
 ActiveSupport::Dependencies.autoload_paths << File.join(File.dirname(__FILE__), 'models')
 
-require 'invoicing'
+require "invoicing"
+
+# Configure database cleaner
+DatabaseCleaner.strategy = :transaction
+class MiniTest::Unit::TestCase
+  def setup
+    DatabaseCleaner.start
+  end
+
+  def teardown
+    DatabaseCleaner.clean
+  end
+end
 
 # Overridden by ../../config/database.yml if it exists.
 TEST_DB_CONFIG = {

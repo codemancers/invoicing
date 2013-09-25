@@ -1,9 +1,7 @@
 # encoding: utf-8
-
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class TaxableTest < Test::Unit::TestCase
-
+class TaxableTest < MiniTest::Unit::TestCase
   class SimpleTaxLogic
     def apply_tax(params)
       if params[:attribute].to_s == 'amount'
@@ -56,11 +54,9 @@ class TaxableTest < Test::Unit::TestCase
     self.table_name = "taxable_records"
   end
 
-
   ######################################################################
-
   def test_raises_error_if_no_tax_logic_is_specified
-    assert_raise ArgumentError do
+    assert_raises ArgumentError do
       NonsenseClass.class_eval do
         acts_as_taxable :amount
       end
@@ -69,8 +65,8 @@ class TaxableTest < Test::Unit::TestCase
 
   def test_apply_tax_on_existing_record
     record = TaxableRecord.find(1)
-    assert_equal BigDecimal('141.09'), record.amount_taxed
-    assert_equal BigDecimal('123.45'), record.amount
+    calculated_tax_amount = (record.amount * BigDecimal('1.1429')).round(2)
+    assert_equal calculated_tax_amount, record.amount_taxed
   end
 
   def test_apply_tax_on_new_record
@@ -79,10 +75,9 @@ class TaxableTest < Test::Unit::TestCase
     assert_equal BigDecimal('200'), record.amount
     assert_equal '$280.00', record.amount_taxed_formatted
     assert_equal '$200.00', record.amount_formatted
-    assert_equal '200', record.amount_before_type_cast
+    assert_equal '200',     record.amount_before_type_cast
     record.save!
-    assert_equal([{'amount' => 200}],
-      ActiveRecord::Base.connection.select_all("SELECT amount FROM taxable_records WHERE id=#{record.id}").to_ary)
+    assert_equal 200, record.reload.amount
   end
 
   def test_remove_tax_on_existing_record
@@ -92,10 +87,9 @@ class TaxableTest < Test::Unit::TestCase
     assert_equal BigDecimal('114.29'), record.amount_taxed
     assert_equal '£100.00', record.amount_formatted
     assert_equal '£114.29', record.amount_taxed_formatted
-    assert_equal 114.29, record.amount_taxed_before_type_cast
+    assert_equal 114.29,    record.amount_taxed_before_type_cast
     record.save!
-    assert_equal([{'amount' => 100}],
-      ActiveRecord::Base.connection.select_all("SELECT amount FROM taxable_records WHERE id=1").to_ary)
+    assert_equal 100, record.reload.amount
   end
 
   def test_remove_tax_on_new_record
@@ -104,10 +98,9 @@ class TaxableTest < Test::Unit::TestCase
     assert_equal BigDecimal('360'), record.amount_taxed
     assert_equal '$300.00', record.amount_formatted
     assert_equal '$360.00', record.amount_taxed_formatted
-    assert_equal '360', record.amount_taxed_before_type_cast
+    assert_equal '360',     record.amount_taxed_before_type_cast
     record.save!
-    assert_equal([{'amount' => 300}],
-      ActiveRecord::Base.connection.select_all("SELECT amount FROM taxable_records WHERE id=#{record.id}").to_ary)
+    assert_equal 300, record.reload.amount
   end
 
   def test_assign_taxed_then_untaxed

@@ -1,46 +1,45 @@
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class CachedRecordTest < Test::Unit::TestCase
-
+class TimeDependentTest < MiniTest::Unit::TestCase
   class TimeDependentRecord < ActiveRecord::Base
     # All columns are renamed to test renaming
     acts_as_time_dependent
   end
 
-
+  # ----------    Acutal tests begin here    ---------
   def test_valid_records_during_single_period
     records = TimeDependentRecord.valid_records_during(DateTime.parse('2009-01-01'), DateTime.parse('2009-03-01'))
-    assert_equal [3, 6, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [3, 6, 8, 10], records.map(&:id).sort
   end
 
   def test_valid_records_during_single_period_ending_on_change_date
     records = TimeDependentRecord.valid_records_during(DateTime.parse('2008-10-31'), DateTime.parse('2009-01-01'))
-    assert_equal [1, 2, 5, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [1, 2, 5, 8, 10], records.map(&:id).sort
   end
 
   def test_valid_records_during_transition_period
     records = TimeDependentRecord.valid_records_during(DateTime.parse('2008-09-01'), DateTime.parse('2009-02-28'))
-    assert_equal [1, 2, 5, 6, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [1, 2, 5, 6, 8, 10], records.map(&:id).sort
   end
 
   def test_valid_records_during_period_after_unreplaced_expiry
     records = TimeDependentRecord.valid_records_during(DateTime.parse('2011-09-01'), DateTime.parse('2011-09-02'))
-    assert_equal [4, 9, 10], records.map{|r| r.id}.sort
+    assert_equal [4, 9, 10], records.map(&:id).sort
   end
 
   def test_valid_records_at_boundary
     records = TimeDependentRecord.valid_records_at(DateTime.parse('2010-01-01'))
-    assert_equal [4, 7, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [4, 7, 8, 10], records.map(&:id).sort
   end
 
   def test_valid_records_at_middle_of_period
     records = TimeDependentRecord.valid_records_at(DateTime.parse('2009-07-01'))
-    assert_equal [3, 6, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [3, 6, 8, 10], records.map(&:id).sort
   end
 
   def test_valid_records_at_just_before_end_of_period
     records = TimeDependentRecord.valid_records_at(DateTime.parse('2008-12-31 23:59:59'))
-    assert_equal [1, 2, 5, 8, 10], records.map{|r| r.id}.sort
+    assert_equal [1, 2, 5, 8, 10], records.map(&:id).sort
   end
 
   def test_default_record_at_returns_default

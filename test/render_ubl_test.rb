@@ -1,9 +1,7 @@
 # encoding: utf-8
-
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class RenderUBLTest < Test::Unit::TestCase
-
+class RenderUBLTest < MiniTest::Unit::TestCase
   def reference_output(filename)
     IO.readlines(File.join(File.dirname(__FILE__), 'ref-output', filename)).join
   end
@@ -39,7 +37,7 @@ class RenderUBLTest < Test::Unit::TestCase
   # end
 
   def test_cannot_render_unknown_ledger_item_subtype
-    assert_raise RuntimeError do
+    assert_raises RuntimeError do
       CorporationTaxLiability.find(6).render_ubl
     end
   end

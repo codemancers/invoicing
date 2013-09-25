@@ -1,7 +1,6 @@
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
 # Mini implementation of the ClassInfo pattern, at which we can fire our tests
-
 module MyNamespace
   module ClassInfoTestModule
     module ActMethods
@@ -55,7 +54,6 @@ module MyNamespace
     end
   end
 
-
   module ClassInfoTest2
     module ActMethods
       def acts_as_class_info_test2(*args)
@@ -79,7 +77,6 @@ ActiveRecord::Base.send(:extend, MyNamespace::ClassInfoTest2::ActMethods)
 
 
 # Model objects which use the acts_as feature defined above
-
 class ClassInfoTestRecord < ActiveRecord::Base
   acts_as_class_info_test 42, :option1 => :moo
   acts_as_class_info_test 84, 42, 168, :option3 => :asdf
@@ -118,9 +115,7 @@ end
 
 
 #######################################################################################
-
-class ClassInfoTest < Test::Unit::TestCase
-
+class ClassInfoTest < MiniTest::Unit::TestCase
   def test_call_into_class_info_via_class
     assert_equal 'foo', ClassInfoTestRecord.class_foo
   end
@@ -207,20 +202,27 @@ class ClassInfoTest < Test::Unit::TestCase
   end
 
   def test_current_options_in_superclass
-    assert_equal({:option3 => :asdf}, ClassInfoTestRecord.get_class_info.current_options)
+    expected_info = {:option3 => :asdf}
+    actual_info   = ClassInfoTestRecord.get_class_info.current_options
+    assert_equal actual_info, expected_info
   end
 
   def test_current_options_in_subclass
-    assert_equal({:option1 => :quack, :option4 => :fdsa}, ClassInfoTestSubclass.get_class_info.current_options)
+    expected_info = {:option1 => :quack, :option4 => :fdsa}
+    actual_info   = ClassInfoTestSubclass.get_class_info.current_options
+    assert_equal actual_info, expected_info
   end
 
   def test_two_features_in_the_same_model
-    assert_equal({:option1 => :badger}, ClassInfoTestSubclass2.test2_class_info.all_options)
-    assert_equal({:option1 => :badger}, ClassInfoTestSubSubclass.test2_class_info.all_options)
+    expected_info = {:option1 => :badger}
+    assert_equal ClassInfoTestSubclass2.test2_class_info.all_options, expected_info
+    assert_equal ClassInfoTestSubSubclass.test2_class_info.all_options, expected_info
   end
 
   def test_the_same_feature_in_two_models
-    assert_equal({:option1 => :okapi, :option3 => :kangaroo}, ClassInfoTest2Record.test2_class_info.all_options)
+    expected_info = {:option1 => :okapi, :option3 => :kangaroo}
+    actual_info   = ClassInfoTest2Record.test2_class_info.all_options
+    assert_equal actual_info, expected_info
   end
 
   def test_method_renamed
@@ -247,7 +249,7 @@ class ClassInfoTest < Test::Unit::TestCase
   end
 
   def test_inherited_to_empty_subclass
-    assert_not_nil ClassInfoTestEmptySubclass.new.get_class_info
+    refute_nil ClassInfoTestEmptySubclass.new.get_class_info
     assert_equal ClassInfoTestEmptySubclass.new.get_class_info, ClassInfoTestRecord.new.get_class_info
   end
 end

@@ -1,9 +1,7 @@
 # encoding: utf-8
-
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class RenderHTMLTest < Test::Unit::TestCase
-
+class RenderHTMLTest < MiniTest::Unit::TestCase
   def reference_output(filename)
     IO.readlines(File.join(File.dirname(__FILE__), 'ref-output', filename)).join
   end
@@ -53,7 +51,7 @@ class RenderHTMLTest < Test::Unit::TestCase
   # end
 
   def test_render_with_null_fragment
-    assert_raise ArgumentError do
+    assert_raises ArgumentError do
       MyInvoice.find(1).render_html do |i|
         i.invoice_label
       end
@@ -61,11 +59,10 @@ class RenderHTMLTest < Test::Unit::TestCase
   end
 
   def test_render_with_too_many_fragments
-    assert_raise ArgumentError do
+    assert_raises ArgumentError do
       MyInvoice.find(1).render_html do |i|
         i.invoice_label "a", "b"
       end
     end
   end
-
 end

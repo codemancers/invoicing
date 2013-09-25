@@ -1,7 +1,7 @@
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class CachedRecordTest < Test::Unit::TestCase
-
+class CachedRecordTest < MiniTest::Unit::TestCase
+  # Classes which this test uses
   class CachedRecord < ActiveRecord::Base
     acts_as_cached_record id: 'id'
     has_many :referrers, class_name: 'RefersToCachedRecord', foreign_key: 'cached_record_id'
@@ -21,15 +21,21 @@ class CachedRecordTest < Test::Unit::TestCase
     end
   end
 
+  # Rebuild cache after doing a transaction rollback
+  def setup
+    super
+    CachedRecord.reload_cache
+  end
 
+  # ----------    Acutal tests begin here    ---------
   def test_find_with_valid_id_should_return_record
     record = CachedRecord.find(1)
-    assert_not_nil record
-    assert record.kind_of?(CachedRecord)
+    refute_nil record
+    assert_kind_of CachedRecord, record
   end
 
   def test_find_with_invalid_id_should_raise_exception
-    assert_raise ActiveRecord::RecordNotFound do
+    assert_raises ActiveRecord::RecordNotFound do
       CachedRecord.find(99)
     end
   end
@@ -50,24 +56,21 @@ class CachedRecordTest < Test::Unit::TestCase
     assert_equal CachedRecord.find_by_value('Two'), CachedRecord.find(2)
   end
 
-  def test_find_with_conditions_should_not_use_the_cache
-    assert !CachedRecord.find_by_value('Two').equal?(CachedRecord.find(2))
-  end
-
   def test_find_without_ids_should_raise_exception
-    assert_raise ActiveRecord::RecordNotFound do
+    assert_raises ActiveRecord::RecordNotFound do
       CachedRecord.find
     end
   end
 
+  # TODO: Find from ids is not hit!
   def test_find_with_empty_list_of_ids_should_raise_exception
-    assert_raise ActiveRecord::RecordNotFound do
+    assert_raises ActiveRecord::RecordNotFound do
       CachedRecord.find(:conditions => {:id => []})
     end
   end
 
   def test_find_with_list_of_ids_should_return_list_of_objects
-    expected = CachedRecord.cached_record_list.sort{|r1, r2| r1.id - r2.id}
+    expected = CachedRecord.cached_record_list.sort
     assert_equal expected, CachedRecord.find([1,2])
   end
 
@@ -89,11 +92,12 @@ class CachedRecordTest < Test::Unit::TestCase
   # end
 
   def test_reload_cache_should_do_what_it_says_on_the_tin
-    CachedRecord.connection.execute "insert into cached_records (id, value) values(3, 'Three')"
+    CachedRecord.create!(value: "Three")
     CachedRecord.reload_cache
     record = CachedRecord.find(3)
-    assert_not_nil record
-    assert record.kind_of?(CachedRecord)
+
+    refute_nil record
+    assert_kind_of CachedRecord, record
     assert_equal 3, CachedRecord.cached_record_list.length
   end
 end

@@ -1,13 +1,6 @@
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-class ConnectionAdapterExtTest < Test::Unit::TestCase
-
-  # Don't run these tests in database transactions.
-  def setup
-  end
-  def teardown
-  end
-
+class ConnectionAdapterExtTest < MiniTest::Unit::TestCase
   def using_database(database_type)
     if database_type.to_sym == database_used_for_testing
       # If the test is for the main database type of this test suite, just run it
@@ -40,7 +33,7 @@ class ConnectionAdapterExtTest < Test::Unit::TestCase
 
   def test_conditional_function_as_sqlite3
     using_database :sqlite3 do
-      assert_raise RuntimeError do
+      assert_raises RuntimeError do
         Invoicing::ConnectionAdapterExt.conditional_function('true', 'foo', 'bar')
       end
     end
@@ -70,10 +63,9 @@ class ConnectionAdapterExtTest < Test::Unit::TestCase
 
   def test_group_by_all_columns_as_sqlite3
     using_database :sqlite3 do
-      assert_raise RuntimeError do
+      assert_raises RuntimeError do
         Invoicing::ConnectionAdapterExt.group_by_all_columns(MyLedgerItem)
       end
     end
   end
-
 end

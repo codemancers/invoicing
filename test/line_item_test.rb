@@ -1,9 +1,7 @@
 # encoding: utf-8
-
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
-####### Helper stuff
-
+## Helper stuff
 module LineItemMethods
   def description2
     "moo"
@@ -11,8 +9,7 @@ module LineItemMethods
 end
 
 
-####### Classes for use in the tests (also used by LedgerItemTest)
-
+## Classes for use in the tests (also used by LedgerItemTest)
 class SuperLineItem < ActiveRecord::Base
   self.table_name = "line_item_records"
   acts_as_line_item
@@ -49,9 +46,7 @@ end
 
 
 ####### The actual tests
-
-class LineItemTest < Test::Unit::TestCase
-
+class LineItemTest < MiniTest::Unit::TestCase
   def test_net_amount_is_currency_value
     assert_equal '$432.10', UntaxedLineItem.find(4).net_amount_formatted
   end
@@ -95,7 +90,7 @@ class LineItemTest < Test::Unit::TestCase
   end
 
   def test_must_provide_ledger_item_association
-    assert_raise RuntimeError do
+    assert_raises RuntimeError do
       OverwrittenMethodsNotPresentLineItem.new.ledger_item
     end
   end
@@ -105,18 +100,15 @@ class LineItemTest < Test::Unit::TestCase
   end
 
   def test_in_effect_scope
-    SuperLineItem.where("id > 8").destroy_all
     assert_equal [1,2,3,4,5,6,7,8], SuperLineItem.all.map{|i| i.id}.sort
     assert_equal [1,2,3,4,5,6], SuperLineItem.in_effect.map{|i| i.id}.sort
   end
 
   def test_sorted_scope
-    SuperLineItem.where("id > 8").destroy_all
     assert_equal [4,2,1,5,3,6,7,8], SuperLineItem.sorted(:tax_point).map{|i| i.id}
   end
 
   def test_sorted_scope_with_non_existent_column
-    SuperLineItem.where("id > 8").destroy_all
     assert_equal [1,2,3,4,5,6,7,8], SuperLineItem.sorted(:this_column_does_not_exist).map{|i| i.id}
   end
 end

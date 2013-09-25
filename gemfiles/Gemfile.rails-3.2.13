@@ -5,3 +5,5 @@ source "http://rubygems.org"
 gemspec path: ".."
 gem "rails", "~> 3.2.13"
 gem "pry-rails"
+
+gem "database_cleaner", github: "tommeier/database_cleaner", branch: "fix-superclass-1-1-1"

@@ -7,8 +7,7 @@ require File.join(File.dirname(__FILE__), 'test_helper.rb')
 # jokes about this sort of thing. The people are suffering badly.
 Invoicing::CurrencyValue::CURRENCIES['ZWD'] = {:symbol => 'ZW$', :round => 5_000_000}
 
-class CurrencyValueTest < Test::Unit::TestCase
-
+class CurrencyValueTest < MiniTest::Unit::TestCase
   class CurrencyValueRecord < ActiveRecord::Base
     validates_numericality_of :amount
     acts_as_currency_value :amount, :tax_amount, :currency => 'currency_code'
