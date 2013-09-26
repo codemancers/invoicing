@@ -27,4 +27,5 @@ DESC
   s.add_development_dependency "sqlite3"
   s.add_development_dependency "flexmock" # TODO: Remove this dependency
   s.add_development_dependency "minitest"
+  s.add_development_dependency "uuid"
 end

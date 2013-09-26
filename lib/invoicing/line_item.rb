@@ -165,9 +165,9 @@ module Invoicing
           scope :sorted, ->(column) {
             column = line_item_class_info.method(column).to_s
             if column_names.include?(column)
-              {:order => "#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}"}
+              order("#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}")
             else
-              {:order => connection.quote_column_name(primary_key)}
+              order(connection.quote_column_name(primary_key))
             end
           }
         end

@@ -318,27 +318,24 @@ module Invoicing
 
         # Dynamically created named scopes
         scope :sent_by, lambda{ |sender_id|
-          { :conditions => {info.method(:sender_id) => sender_id} }
+          where(info.method(:sender_id) => sender_id)
         }
 
         scope :received_by, lambda{ |recipient_id|
-          { :conditions => {info.method(:recipient_id) => recipient_id} }
+          where(info.method(:recipient_id) => recipient_id)
         }
 
         scope :sent_or_received_by, lambda{ |sender_or_recipient_id|
           sender_col = connection.quote_column_name(info.method(:sender_id))
           recipient_col = connection.quote_column_name(info.method(:recipient_id))
-          { :conditions => ["#{sender_col} = ? OR #{recipient_col} = ?",
-                            sender_or_recipient_id, sender_or_recipient_id] }
+
+          where(["#{sender_col} = ? OR #{recipient_col} = ?",
+                  sender_or_recipient_id, sender_or_recipient_id])
         }
 
-        scope :in_effect, lambda {
-          { :conditions => {info.method(:status) => ['closed', 'cleared']} }
-        }
+        scope :in_effect, -> { where(info.method(:status) => ['closed', 'cleared']) }
 
-        scope :open_or_pending, lambda {
-          { :conditions => {info.method(:status) => ['open', 'pending']} }
-        }
+        scope :open_or_pending, -> { where(info.method(:status) => ['open', 'pending']) }
 
         scope :due_at, lambda{ |date|
           due_date = connection.quote_column_name(info.method(:due_date))
@@ -348,9 +345,9 @@ module Invoicing
         scope :sorted, lambda{|column|
           column = ledger_item_class_info.method(column).to_s
           if column_names.include?(column)
-            {:order => "#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}"}
+            order("#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}")
           else
-            {:order => connection.quote_column_name(primary_key)}
+            order(connection.quote_column_name(primary_key))
           end
         }
 

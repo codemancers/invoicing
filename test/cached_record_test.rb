@@ -63,11 +63,13 @@ class CachedRecordTest < MiniTest::Unit::TestCase
   end
 
   # TODO: Find from ids is not hit!
-  def test_find_with_empty_list_of_ids_should_raise_exception
-    assert_raises ActiveRecord::RecordNotFound do
-      CachedRecord.find(:conditions => {:id => []})
-    end
-  end
+  # Find shouldn't take an array or conditions. The whole concept of
+  # cached_record needs to be revisited
+  # def test_find_with_empty_list_of_ids_should_raise_exception
+  #   assert_raises ActiveRecord::RecordNotFound do
+  #     CachedRecord.find(:conditions => {:id => []})
+  #   end
+  # end
 
   def test_find_with_list_of_ids_should_return_list_of_objects
     expected = CachedRecord.cached_record_list.sort

@@ -9,7 +9,7 @@ class TestBaseclass < ActiveRecord::Base
   self.table_name = "find_subclasses_records"
   self.inheritance_column = "type_name" # usually left as default 'type'. rename to test renaming
   belongs_to :associate, :foreign_key => 'associate_id', :class_name => 'FindSubclassesAssociate'
-  scope :with_coolness, lambda{|factor| {:conditions => {:coolness_factor => factor}}}
+  scope :with_coolness, lambda { |factor| where(:coolness_factor => factor) }
   extend Invoicing::FindSubclasses
   def self.coolness_factor; 3; end
 end
