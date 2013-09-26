@@ -18,7 +18,7 @@ This is a framework for generating and displaying invoices (ideal for commercial
  and accountant-friendly.
 DESC
 
-  s.files = Dir["{app,config,db,lib}/**/*"] + ["MIT-LICENSE", "Rakefile", "README.md"]
+  s.files = Dir["{app,config,db,lib}/**/*"] + ["LICENSE", "Rakefile", "README.rdoc"]
   s.test_files = `git ls-files -- {test,spec,features}/*`.split("\n")
 
   s.add_dependency "rails", ">= 3.2.13"
