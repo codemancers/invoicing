@@ -1,11 +1,14 @@
 # encoding: utf-8
 
+require "active_support/concern"
 require 'builder'
 
 module Invoicing
   module LedgerItem
     # Included into ActiveRecord model object when +acts_as_ledger_item+ is invoked.
     module RenderHTML
+      extend ActiveSupport::Concern
+
       # Shortcut for rendering an invoice or a credit note into a human-readable HTML format.
       # Can be called without any arguments, in which case a general-purpose representation is
       # produced. Can also be given options and a block for customising the output:

@@ -1,3 +1,5 @@
+require 'active_support/concern'
+
 module Invoicing
   # == Aggressive ActiveRecord cache
   #
@@ -20,6 +22,7 @@ module Invoicing
   # To activate +CachedRecord+, call +acts_as_cached_record+ in the scope of an
   # <tt>ActiveRecord::Base</tt> class.
   module CachedRecord
+    extend ActiveSupport::Concern
 
     module ActMethods
       # Call +acts_as_cached_record+ on an <tt>ActiveRecord::Base</tt> class to declare

@@ -73,7 +73,6 @@ module Invoicing
         else
           # acts_as is being called for the first time -- do the mixins!
           calling_class.send(:include, source_module)
-          calling_class.send(:extend,  source_module::ClassMethods) if defined?(source_module::ClassMethods)
           nil # no previous_info
         end
 

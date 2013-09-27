@@ -1,3 +1,5 @@
+require "active_support/concern"
+
 module Invoicing
   # = Input and output of monetary values
   #
@@ -56,6 +58,7 @@ module Invoicing
   # The string returned by a +_formatted+ method is UTF-8 encoded -- remember most currency symbols (except $)
   # are outside basic 7-bit ASCII.
   module CurrencyValue
+    extend ActiveSupport::Concern
 
     # Data about currencies, indexed by ISO 4217 code. (Currently a very short list, in need of extending.)
     # The values are hashes, in which the following keys are recognised:
@@ -111,10 +114,12 @@ module Invoicing
       # (The example above is actually a real part of +LedgerItem+.)
       def acts_as_currency_value(*args)
         Invoicing::ClassInfo.acts_as(Invoicing::CurrencyValue, self, args)
-
-        # Register callback if this is the first time acts_as_currency_value has been called
-        before_save :write_back_currency_values if currency_value_class_info.previous_info.nil?
       end
+    end
+
+    included do
+      # Register callback if this is the first time acts_as_currency_value has been called
+      before_save :write_back_currency_values, :if => "currency_value_class_info.previous_info.nil?"
     end
 
     # Format a numeric monetary value into a human-readable string, in the currency of the
@@ -128,7 +133,9 @@ module Invoicing
     # back to the actual attributes, so that they are saved in the database. (This doesn't happen in
     # +convert_currency_values+ to avoid losing the +_before_type_cast+ attribute values.)
     def write_back_currency_values
-      currency_value_class_info.all_args.each {|attr| write_attribute(attr, send(attr)) }
+      currency_value_class_info.all_args.each do |attr|
+        write_attribute(attr, send(attr))
+      end
     end
 
     protected :write_back_currency_values

@@ -1,3 +1,5 @@
+require "active_support/concern"
+
 module Invoicing
   # == Time-dependent value objects
   #
@@ -154,6 +156,7 @@ module Invoicing
   # Apart from these requirements, a +TimeDependent+ object is a normal model object, and you may
   # give it whatever extra metadata you want, and make references to it from any other model object.
   module TimeDependent
+    extend ActiveSupport::Concern
 
     module ActMethods
       # Identifies the current model object as a +TimeDependent+ object, and creates all the

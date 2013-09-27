@@ -1,6 +1,8 @@
 # %w[rubygems rake rake/clean fileutils newgem rubigen hoe].each { |f| require f }
 %w[rubygems rake rake/clean fileutils  hoe].each { |f| require f }
-require File.dirname(__FILE__) + '/lib/invoicing'
+
+$: << File.join(File.dirname(__FILE__), '..', 'lib')
+require "invoicing"
 
 # Hoe calls Ruby with the "-w" set by default; unfortunately, ActiveRecord (at version 2.2.2
 # at least) causes a lot of warnings internally, by no fault of our own, which clutters

@@ -1,9 +1,11 @@
+require "active_support/concern"
 require 'builder'
 
 module Invoicing
   module LedgerItem
     # Included into ActiveRecord model object when +acts_as_ledger_item+ is invoked.
     module RenderUBL
+      extend ActiveSupport::Concern
 
       # Renders this invoice or credit note into a complete XML document conforming to the
       # {OASIS Universal Business Language}[http://ubl.xml.org/] (UBL) open standard for interchange

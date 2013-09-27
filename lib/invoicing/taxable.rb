@@ -1,5 +1,7 @@
 # encoding: utf-8
 
+require "active_support/concern"
+
 module Invoicing
   # = Computation of tax on prices
   #
@@ -205,6 +207,8 @@ module Invoicing
   # that it is more than entered by the user; and zero means that there was no difference.
   #
   module Taxable
+    extend ActiveSupport::Concern
+
     module ActMethods
       # Declares that one or more attributes on this model object store monetary values to which tax may be
       # applied. Takes one or more attribute names, followed by an options hash:

@@ -1,8 +1,11 @@
+require "active_support/concern"
 require File.join(File.dirname(__FILE__), 'test_helper.rb')
 
 # Mini implementation of the ClassInfo pattern, at which we can fire our tests
 module MyNamespace
   module ClassInfoTestModule
+    extend ActiveSupport::Concern
+
     module ActMethods
       def acts_as_class_info_test(*args)
         Invoicing::ClassInfo.acts_as(MyNamespace::ClassInfoTestModule, self, args)
@@ -55,6 +58,8 @@ module MyNamespace
   end
 
   module ClassInfoTest2
+    extend ActiveSupport::Concern
+
     module ActMethods
       def acts_as_class_info_test2(*args)
         Invoicing::ClassInfo.acts_as(MyNamespace::ClassInfoTest2, self, args)

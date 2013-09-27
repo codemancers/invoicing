@@ -1,12 +1,22 @@
-$:.unshift(File.dirname(__FILE__)) unless
-  $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+require "active_record"
 
-require 'active_record'
+require "invoicing/class_info"  # load first because other modules depend on this
+require "invoicing/cached_record"
+require "invoicing/connection_adapter_ext"
+require "invoicing/currency_value"
+require "invoicing/find_subclasses"
+require "invoicing/ledger_item"
+require "invoicing/line_item"
+require "invoicing/price"
+require "invoicing/tax_rate"
+require "invoicing/taxable"
+require "invoicing/time_dependent"
 
-require 'invoicing/class_info'  # load first because other modules depend on this
-Dir.glob(File.join(File.dirname(__FILE__), 'invoicing/**/*.rb')).sort.each {|f| require f }
-
-# Mix all modules Invoicing::*::ActMethods into ActiveRecord::Base as class methods
-Invoicing.constants.map{|c| Invoicing.const_get(c) }.select{|m| m.is_a?(Module) && m.const_defined?('ActMethods') }.each{
-  |m| ActiveRecord::Base.send(:extend, m.const_get('ActMethods'))
-}
+ActiveRecord::Base.send(:extend, Invoicing::CachedRecord::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::CurrencyValue::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::LedgerItem::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::LineItem::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::Price::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::TaxRate::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::Taxable::ActMethods)
+ActiveRecord::Base.send(:extend, Invoicing::TimeDependent::ActMethods)

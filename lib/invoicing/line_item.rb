@@ -1,3 +1,5 @@
+require "active_support/concern"
+
 module Invoicing
   # = Line item objects
   #
@@ -130,6 +132,8 @@ module Invoicing
   #   These standard datetime columns are also recommended.
   #
   module LineItem
+    extend ActiveSupport::Concern
+
     module ActMethods
       # Declares that the current class is a model for line items (i.e. individual items on invoices
       # and credit notes).
@@ -149,29 +153,31 @@ module Invoicing
           # Set the 'amount' columns to act as currency values
           acts_as_currency_value(info.method(:net_amount), info.method(:tax_amount))
 
-          before_validation :calculate_tax_amount
-
           extend Invoicing::FindSubclasses
-
-          # Dynamically created named scopes
-          scope :in_effect, -> {
-            ledger_assoc = line_item_class_info.method(:ledger_item).to_sym
-            ledger_refl = reflections[ledger_assoc]
-            ledger_table = ledger_refl.table_name # not quoted_table_name because it'll be quoted again
-            status_column = ledger_refl.klass.send(:ledger_item_class_info).method(:status)
-            joins(ledger_assoc).where("#{ledger_table}.#{status_column}" => ['closed', 'cleared'])
-          }
-
-          scope :sorted, ->(column) {
-            column = line_item_class_info.method(column).to_s
-            if column_names.include?(column)
-              order("#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}")
-            else
-              order(connection.quote_column_name(primary_key))
-            end
-          }
         end
       end
+    end
+
+    included do
+      before_validation :calculate_tax_amount
+
+      # Dynamically created named scopes
+      scope :in_effect, (lambda do
+        ledger_assoc = line_item_class_info.method(:ledger_item).to_sym
+        ledger_refl = reflections[ledger_assoc]
+        ledger_table = ledger_refl.table_name # not quoted_table_name because it'll be quoted again
+        status_column = ledger_refl.klass.send(:ledger_item_class_info).method(:status)
+        joins(ledger_assoc).where("#{ledger_table}.#{status_column}" => ['closed', 'cleared'])
+      end)
+
+      scope :sorted, (lambda do |column|
+        column = line_item_class_info.method(column).to_s
+        if column_names.include?(column)
+          order("#{connection.quote_column_name(column)}, #{connection.quote_column_name(primary_key)}")
+        else
+          order(connection.quote_column_name(primary_key))
+        end
+      end)
     end
 
     # Overrides the default constructor of <tt>ActiveRecord::Base</tt> when +acts_as_line_item+
