@@ -286,7 +286,7 @@ module Invoicing
 
         unless value
           raw_value = object.read_attribute(attr)
-          value = BigDecimal.new(raw_value.to_s) unless raw_value.nil?
+          value = BigDecimal(raw_value.to_s) unless raw_value.nil?
         end
         value
       end
