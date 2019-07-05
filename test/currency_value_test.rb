@@ -5,7 +5,6 @@ require_relative 'test_helper'
 # Test extending the default list of currency codes: include the Zimbabwe Dollar.
 # This also tests rounding and seriously large numbers. -- Sorry, you shouldn't make
 # jokes about this sort of thing. The people are suffering badly.
-Invoicing::CurrencyValue::CURRENCIES['ZWD'] = {:symbol => 'ZW$', :round => 5_000_000}
 
 class CurrencyValueTest < MiniTest::Unit::TestCase
   class CurrencyValueRecord < ActiveRecord::Base
@@ -13,11 +12,6 @@ class CurrencyValueTest < MiniTest::Unit::TestCase
     acts_as_currency_value :amount, :tax_amount, :currency => 'currency_code'
   end
 
-  # In Finland and the Netherlands, Euro amounts are commonly rounded to the nearest 5 cents.
-  class EurosInFinlandRecord < ActiveRecord::Base
-    self.table_name = "no_currency_column_records"
-    acts_as_currency_value :amount, :currency_code => 'EUR', :round => 0.05, :space => true
-  end
 
   def test_format_small_number
     assert_equal "€0.02", CurrencyValueRecord.find(2).tax_amount_formatted
@@ -28,15 +22,15 @@ class CurrencyValueTest < MiniTest::Unit::TestCase
   end
 
   def test_format_no_decimal_point
-    assert_equal "¥8,888", CurrencyValueRecord.find(4).amount_formatted
+    assert_equal "¥8,888", CurrencyValueRecord.find(2).amount_formatted
   end
 
   def test_format_suffix_unit
-    assert_equal "5,432.00 元", CurrencyValueRecord.find(3).amount_formatted
+    assert_equal "5,432.00 元", CurrencyValueRecord.find(2).amount_formatted
   end
 
   def test_format_unknown_currency
-    assert_equal "123.00 XXX", CurrencyValueRecord.find(5).amount_formatted
+    assert_equal "123.00 XXX", CurrencyValueRecord.find(2).amount_formatted
   end
 
   def test_format_with_custom_currency

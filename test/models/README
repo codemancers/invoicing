@@ -1,4 +1,0 @@
-This folder contains model object definitions used by the tests in the 'test' folder;
-it is included in ActiveSupport::Dependencies.load_paths but not 'require'd directly,
-so that we can test the effect which the ActiveSupport dependency resolution has on
-our code.

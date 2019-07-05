@@ -1,66 +1,5 @@
 module Invoicing
-  # This module is intended for use only internally within this framework. It implements
-  # a pattern needed in several other modules: an +acts_as_something_or_other+ method can
-  # be called within the scope of an +ActiveRecord+ class, given a number of arguments;
-  # including options which define how columns are renamed in a given model object.
-  # The information from these arguments needs to be stored in a class variable for later
-  # use in instances of that class. It must be possible to call the +acts_as_+ method
-  # multiple times, combining the arguments from the various calls, to make the whole thing
-  # look nicely declarative. Subclasses should inherit +acts_as_+ arguments from their
-  # superclass, but should be able to override them with their own values.
-  #
-  # This pattern assumes a particular module structure, like the following:
-  #
-  #   module MyNamespace                    # you may use arbitrarily nested modules for namespacing (optional)
-  #     module Teleporter                   # the name of this module defines auto-generated method names
-  #       module ActMethods
-  #         def acts_as_teleporter(*args)   # should be called "acts_as_#{module_name.underscore}"
-  #           Invoicing::ClassInfo.acts_as(MyNamespace::Teleporter, self, args)
-  #         end
-  #       end
-  #
-  #       def transmogrify_the_instance     # will become an instance method of the class on which the
-  #         info = teleporter_class_info    # acts_as_ method is called.
-  #         info.do_transmogrify
-  #       end
-  #
-  #       module ClassMethods
-  #         def transmogrify_the_class      # will become a class method of the class on which the
-  #           info = teleporter_class_info  # acts_as_ method is called.
-  #           info.do_transmogrify
-  #         end
-  #       end
-  #
-  #       class ClassInfo < Invoicing::ClassInfo::Base
-  #         def do_transmogrify
-  #           case all_options[:transmogrification]
-  #             when :total then "Transmogrified by #{all_args.first}"
-  #           end
-  #         end
-  #       end
-  #     end
-  #   end
-  #
-  #   ActiveRecord::Base.send(:extend, MyNamespace::Teleporter::ActMethods)
-  #
-  #
-  # +ClassInfo+ is used to store and process the arguments passed to the +acts_as_teleporter+ method
-  # when it is called in the scope of an +ActiveRecord+ model class. Finally, the feature defined by
-  # the +Teleporter+ module above can be used like this:
-  #
-  #   class Teleporter < ActiveRecord::Base
-  #     acts_as_teleporter 'Zoom2020', :transmogrification => :total
-  #   end
-  #
-  #   Teleporter.transmogrify_the_class               # both return "Transmogrified by Zoom2020"
-  #   Teleporter.find(42).transmogrify_the_instance
   module ClassInfo
-
-    # Provides the main implementation pattern for an +acts_as_+ method. See the example above
-    # for usage.
-    # +source_module+:: The module object which is using the +ClassInfo+ pattern
-    # +calling_class+:: The class in whose scope the +acts_as_+ method was called
-    # +args+::          The array of arguments (including options hash) to the +acts_as_+ method
     def self.acts_as(source_module, calling_class, args)
       # The name by which the particular module using ClassInfo is known
       module_name = source_module.name.split('::').last.underscore
@@ -104,11 +43,6 @@ module Invoicing
       end
     end
 
-
-    # Base class for +ClassInfo+ objects, from which you need to derive a subclass in each module where
-    # you want to use +ClassInfo+. An instance of a <tt>ClassInfo::Base</tt> subclass is created every
-    # time an +acts_as_+ method is called, and that instance can be accessed through the
-    # +my_module_name_class_info+ method on the class which called +acts_as_my_module_name+.
     class Base
       # The class on which the +acts_as_+ method was called
       attr_reader :model_class
@@ -133,16 +67,6 @@ module Invoicing
       # in turn overridden by +current_options+.
       attr_reader :all_options
 
-      # Initialises a <tt>ClassInfo::Base</tt> instance and parses arguments.
-      # If subclasses override +initialize+ they should call +super+.
-      # +model_class+::   The class on which the +acts_as+ method was called
-      # +previous_info+:: The <tt>ClassInfo::Base</tt> instance created by the last +acts_as_+ method
-      #                   call on the same class (or its superclass); +nil+ if this is the first call.
-      # +args+::          Array of arguments given to the +acts_as_+ method when it was invoked.
-      #
-      # If the last element of +args+ is a hash, it is used as an options array. All other elements
-      # of +args+ are concatenated into an array, +uniq+ed and flattened. (They could be a list of symbols
-      # representing method names, for example.)
       def initialize(model_class, previous_info, args)
         @model_class = model_class
         @previous_info = previous_info

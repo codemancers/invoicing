@@ -50,14 +50,6 @@ end
 class InvoiceSubtype < MyInvoice
 end
 
-class MyCreditNote < MyLedgerItem
-  acts_as_credit_note
-end
-
-class MyPayment < MyLedgerItem
-  acts_as_payment
-end
-
 class CorporationTaxLiability < MyLedgerItem
   def self.debit_when_sent_by_self
     true
