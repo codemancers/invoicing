@@ -195,7 +195,7 @@ module Invoicing
         # Create replaced_by association if it doesn't exist yet
         replaced_by_id = time_dependent_class_info.method(:replaced_by_id)
         unless respond_to? :replaced_by
-          belongs_to :replaced_by, class_name: name, foreign_key: replaced_by_id
+          belongs_to :replaced_by, class_name: name, foreign_key: replaced_by_id, optional: true
         end
 
         # Create value_at and value_now method aliases
