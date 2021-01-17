@@ -1,22 +1,12 @@
-source "http://rubygems.org"
+# -*- ruby -*-
 
-# Declare your gem's dependencies in invoicing.gemspec.
-# Bundler will treat runtime dependencies like base dependencies, and
-# development dependencies will be added by default to the :development group.
+source 'http://rubygems.org'
+
 gemspec
 
-# Declare any dependencies that are still in development here instead of in
-# your gemspec. These might include edge Rails or gems from your path or
-# Git. Remember to move these dependencies to your gemspec before releasing
-# your gem to rubygems.org.
+gem 'minitest'
+gem 'rails', '~> 5.1.0'
 
-gem "pry-rails"
-gem "minitest"
+gem 'database_cleaner', github: 'tommeier/database_cleaner', branch: 'fix-superclass-1-1-1'
 
-# Issue in database cleaner for sqlite support
-# https://github.com/bmabey/database_cleaner/issues/224
-# https://github.com/bmabey/database_cleaner/pull/241
-gem "database_cleaner", "~> 1.0.1"
-gem "rake", "~> 11"
-
-gem "coveralls", "~> 0.7.0", require: false
+gem 'coveralls', '~> 0.7.0', require: false
