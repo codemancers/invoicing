@@ -13,7 +13,7 @@ accountant-friendly.
 
 Detailed documentation about `invoicing` gem can be found on:
 
-http://invoicing.codemancers.com/
+https://invoicing.c9s.dev/
 
 ## Features
 
