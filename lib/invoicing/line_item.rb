@@ -196,7 +196,8 @@ module Invoicing
     # Returns the currency code of the ledger item to which this line item belongs.
     def currency
       ledger_item = line_item_class_info.get(self, :ledger_item)
-      raise RuntimeError, 'Cannot determine currency for line item without a ledger item' if ledger_item.nil?
+      return if ledger_item.nil?
+
       ledger_item.send(:ledger_item_class_info).get(ledger_item, :currency)
     end
 
